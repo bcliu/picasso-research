@@ -1,2 +1,6 @@
 src/constants.m
+src/constants.py
 *~
+*.log
+*.so
+*.pyc

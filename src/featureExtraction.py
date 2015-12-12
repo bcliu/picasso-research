@@ -1,8 +1,9 @@
+from constants import *
+
 import numpy as np
 import matplotlib.pyplot as plt
 
 # Make sure that caffe is on the python path:
-caffe_root = '/mnt/software/caffe/'
 import sys
 sys.path.insert(0, caffe_root + 'python')
 
@@ -39,14 +40,14 @@ transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_
 transformer.set_raw_scale('data', 255)  # the reference model operates on images in [0,255] range instead of [0,1]
 transformer.set_channel_swap('data', (2,1,0))
 
-net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image('/mnt/software/research/eye1.jpg'))#caffe_root + 'examples/images/cat.jpg'))
+net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(research_root + 'images/eye1.jpg'))
 out = net.forward()
 
 print("Predicted class is #{}.".format(out['prob'][0].argmax()))
 
 plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0]))
 
-imagenet_labels_filename = caffe_root + 'examples/ilsvrc12/synset_words.txt'
+imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
 
 # sort top k predictions from softmax output
