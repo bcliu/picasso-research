@@ -1,11 +1,11 @@
 constants;
 
-imagePath = caffe_root + 'examples/images/fish-bike.jpg';
+imagePath = [research_root 'images/bull1.png'];
 
 caffe.set_mode_cpu();
-model_dir = caffe_root + 'models/bvlc_alexnet/';
+model_dir = [caffe_root 'models/bvlc_reference_caffenet/'];
 net_model = [model_dir 'deploy.prototxt'];
-net_weights = [model_dir 'bvlc_alexnet.caffemodel'];
+net_weights = [model_dir 'bvlc_reference_caffenet.caffemodel'];
 phase = 'test'; % run with phase test (so that dropout isn't applied)
 net = caffe.Net(net_model, net_weights, phase);
 im = imread(imagePath);
@@ -30,7 +30,7 @@ scores = mean(scores, 2);  % take average scores over 10 crops
 % call caffe.reset_all() to reset caffe
 %caffe.reset_all();
 
-classes = textread(caffe_root + 'examples/ilsvrc12/synset_words.txt', '%s', 'delimiter','\n');
+classes = textread([caffe_root 'data/ilsvrc12/synset_words.txt'], '%s', 'delimiter','\n');
 classes(maxlabel)
 
 
