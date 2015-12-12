@@ -1,5 +1,7 @@
 from constants import *
 
+image_path = research_root + 'images/cat-odd1.jpg'
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -40,7 +42,7 @@ transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_
 transformer.set_raw_scale('data', 255)  # the reference model operates on images in [0,255] range instead of [0,1]
 transformer.set_channel_swap('data', (2,1,0))
 
-net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(research_root + 'images/eye1.jpg'))
+net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(image_path))
 out = net.forward()
 
 print("Predicted class is #{}.".format(out['prob'][0].argmax()))
