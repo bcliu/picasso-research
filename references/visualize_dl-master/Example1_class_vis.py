@@ -1,4 +1,5 @@
-caffe_root = '/mnt/software/caffe/'
+from constants import *
+
 import sys
 sys.path.insert(0, caffe_root + 'python')
 
@@ -31,7 +32,7 @@ I = np.random.random(net.blobs['data'].data.shape)*10
 cls_img,s = vis_ml.calc_cls_model(net,I,verbose=True)
 
 #save cls_img
-cls_img_name = './result/goose.png'
+cls_img_name = 'goose.png'
 print 'save classification image of goose to {}'.format(cls_img_name)
 imsave(cls_img_name,cls_img)
 
@@ -39,4 +40,3 @@ imsave(cls_img_name,cls_img)
 plt.figure(1)
 plt.imshow(cls_img)
 plt.show()
-

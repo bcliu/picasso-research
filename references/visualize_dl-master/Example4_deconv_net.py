@@ -1,4 +1,5 @@
-caffe_root = '/mnt/software/caffe/'
+from constants import *
+
 import sys
 sys.path.insert(0, caffe_root + 'python')
 
@@ -85,10 +86,10 @@ deconv.set_relu_layer('relu1')
 deconv.set_deconv_layer(deconv1,'conv1')
 
 # read image
-im = caffe.io.load_image('./data/cat.jpg')
+im = caffe.io.load_image(research_root + '/images/eyes/1.jpg')
 
 transformer = caffe.io.Transformer({'data':net.blobs['data'].data.shape})
-transformer.set_mean('data',np.load('./data/ilsvrc_2012_mean.npy').mean(1).mean(1))
+transformer.set_mean('data',np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1))
 transformer.set_channel_swap('data',[2,1,0])
 transformer.set_raw_scale('data',255)
 transformer.set_transpose('data',[2,0,1])
@@ -106,18 +107,18 @@ deconv.set_unpool_layer(net.blobs['pool2_mask'].data,2,3,'pool2')
 deconv.set_unpool_layer(net.blobs['pool1_mask'].data,2,3,'pool1')
 
 # find top activation and reconstruction
-top_act = np.zeros(net.blobs['conv2'].data.shape)
-layer_feat_map = net.blobs['conv2'].data
+top_act = np.zeros(net.blobs['conv4'].data.shape)
+layer_feat_map = net.blobs['conv4'].data
 
 top_act[layer_feat_map==layer_feat_map.max()] = layer_feat_map.max()
-recon_feat = deconv.recon_down(top_act,'relu2')
+recon_feat = deconv.recon_down(top_act,'relu4')
 
 # show reconstruction image
 image = recon_feat[-1][0]
 image -= image.min()
 image /= image.max()
 image = image.transpose([1,2,0])
-re_image_name = './result/dog_deconv_net_2.png'
+re_image_name = 'result.png'
 imsave(re_image_name,image)
 
 plt.figure(1)
