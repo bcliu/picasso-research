@@ -1,6 +1,6 @@
 from constants import *
 
-image_path = research_root + 'images/cat-odd1.jpg'
+image_path = research_root + 'images/eyes/7.jpg'
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -59,5 +59,19 @@ print labels[top_k]
 # filters = net.params['conv1'][0].data
 # vis_square(filters.transpose(0, 2, 3, 1))
 
-feat = net.blobs['conv5'].data[0]
-vis_square(feat, padval=0.5)
+# feat = net.blobs['conv1'].data[0, :36]
+# vis_square(feat, padval=1)
+
+# filters = net.params['conv2'][0].data
+# vis_square(filters[:48].reshape(48**2, 5, 5))
+
+# feat = net.blobs['conv2'].data[0, :36]
+# vis_square(feat, padval=1)
+
+# feat = net.blobs['conv5'].data[0]
+# vis_square(feat, padval=0.5)
+
+feat = net.blobs['conv4'].data[0]
+vis_square(feat, padval=0.2)
+
+plt.show()
