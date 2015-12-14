@@ -1,6 +1,11 @@
 from constants import *
+import argparse
 
 image_path = research_root + 'images/eyes/7.jpg'
+
+parser = argparse.ArgumentParser(description='LOL')
+parser.add_argument('--path', default=image_path, required=False)
+args = parser.parse_args()
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -42,12 +47,12 @@ transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_
 transformer.set_raw_scale('data', 255)  # the reference model operates on images in [0,255] range instead of [0,1]
 transformer.set_channel_swap('data', (2,1,0))
 
-net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(image_path))
+net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(args.path))
 out = net.forward()
 
 print("Predicted class is #{}.".format(out['prob'][0].argmax()))
 
-plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0]))
+# plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0]))
 
 imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
@@ -60,18 +65,36 @@ print labels[top_k]
 # vis_square(filters.transpose(0, 2, 3, 1))
 
 # feat = net.blobs['conv1'].data[0, :36]
-# vis_square(feat, padval=1)
+# vis_square(feat, padval=0.2)
 
 # filters = net.params['conv2'][0].data
 # vis_square(filters[:48].reshape(48**2, 5, 5))
 
 # feat = net.blobs['conv2'].data[0, :36]
-# vis_square(feat, padval=1)
+# vis_square(feat, padval=0.2)
+
+# feat = net.blobs['conv4'].data[0]
+# vis_square(feat, padval=0.2)
 
 # feat = net.blobs['conv5'].data[0]
-# vis_square(feat, padval=0.5)
+# vis_square(feat, padval=0.2)
 
-feat = net.blobs['conv4'].data[0]
-vis_square(feat, padval=0.2)
+# Rectified fc6
+# feat = net.blobs['fc6'].data[0]
+# plt.subplot(2, 1, 1)
+# plt.plot(feat.flat)
+# plt.subplot(2, 1, 2)
+# _ = plt.hist(feat.flat[feat.flat > 0], bins=100)
 
-plt.show()
+# Rectified fc7
+# feat = net.blobs['fc7'].data[0]
+# plt.subplot(2, 1, 1)
+# plt.plot(feat.flat)
+# plt.subplot(2, 1, 2)
+# _ = plt.hist(feat.flat[feat.flat > 0], bins=100)
+
+# Last layer output
+# feat = net.blobs['prob'].data[0]
+# plt.plot(feat.flat)
+
+# plt.show()
