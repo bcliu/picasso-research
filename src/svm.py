@@ -72,5 +72,7 @@ from sklearn import svm
 clf = svm.SVC()
 clf.fit(datapoints, datalabels)
 
-net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image('/mnt/software/research/images/cat-nose3.jpg'))
+net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image('/mnt/software/research/images/eyes/cubism/cubism-eye.jpg-sm.jpg'))
 out = net.forward()
+
+clf.predict([net.blobs['fc6'].data[0].tolist()])
