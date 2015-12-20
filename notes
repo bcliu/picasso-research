@@ -3,3 +3,17 @@ raising questions that people ignore, thinking about why, experiment and try -- 
 Caffe fine tuning: does it mean more classes in last fully connected layer, more neurons???
 
 Unable to find which combinations of neurons on 5th conv layer codes eyes -- how about use another NN to find such combinations??
+
+
+TO READ:
+http://caffe.berkeleyvision.org/gathered/examples/feature_extraction.html
+http://nbviewer.ipython.org/github/BVLC/caffe/blob/master/examples/00-classification.ipynb
+http://www.cs.toronto.edu/~fritz/absps/imagenet.pdf
+caffe fine tuning add classes
+https://www.cs.nyu.edu/~fergus/papers/zeilerECCV2014.pdf
+http://www.cnblogs.com/platero/p/3967208.html
+
+get started with neural network research
+https://www.iro.umontreal.ca/~lisa/pointeurs/TR1312.pdf so many interesting papers that you are passionate about to read!!!
+convolutional neural network library for research
+how to do neural network research
