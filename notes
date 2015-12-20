@@ -17,3 +17,8 @@ get started with neural network research
 https://www.iro.umontreal.ca/~lisa/pointeurs/TR1312.pdf so many interesting papers that you are passionate about to read!!!
 convolutional neural network library for research
 how to do neural network research
+
+
+
+WHY SHRINKING IMAGES OF EYES AND NOSES: WHEN LARGE, (EVEN JUST OCCUPY 1/4 OF IMAGE) STILL CLASSIFICATION RESULT IS KINDA RANDOM. HAVE TO BE SMALL!
+BACKGROUND IMAGE DOESN'T SEEM TO DISTURB MUCH
