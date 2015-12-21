@@ -22,3 +22,7 @@ how to do neural network research
 
 WHY SHRINKING IMAGES OF EYES AND NOSES: WHEN LARGE, (EVEN JUST OCCUPY 1/4 OF IMAGE) STILL CLASSIFICATION RESULT IS KINDA RANDOM. HAVE TO BE SMALL!
 BACKGROUND IMAGE DOESN'T SEEM TO DISTURB MUCH
+
+https://github.com/xieguotian/visualize_dl
+
+http://www.cv-foundation.org/openaccess/content_cvpr_2015/papers/Liang_Recurrent_Convolutional_Neural_2015_CVPR_paper.pdf
