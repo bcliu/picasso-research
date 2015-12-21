@@ -76,8 +76,8 @@ print labels[top_k]
 # feat = net.blobs['conv4'].data[0]
 # vis_square(feat, padval=0.2)
 
-# feat = net.blobs['conv5'].data[0]
-# vis_square(feat, padval=0.2)
+feat = net.blobs['conv5'].data[0]
+vis_square(feat, padval=0.2)
 
 # Rectified fc6
 # feat = net.blobs['fc6'].data[0]
@@ -97,4 +97,4 @@ print labels[top_k]
 # feat = net.blobs['prob'].data[0]
 # plt.plot(feat.flat)
 
-# plt.show()
+plt.show()

@@ -5,7 +5,7 @@ from os import walk
 import numpy as np
 import matplotlib.pyplot as plt
 
-parser = argparse.ArgumentParser(description='LOL')
+parser = argparse.ArgumentParser(description='')
 parser.add_argument('--type1')
 parser.add_argument('--type2')
 parser.add_argument('--others')

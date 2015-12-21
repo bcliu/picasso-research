@@ -1,0 +1,18 @@
+This project depends on Caffe (http://caffe.berkeleyvision.org/). To use the Matlab version of the code, run "make all matcaffe" in Caffe root; to use the Python version, run "make all pycaffe" in Caffe root.
+
+Support vector machine code depends on scikit-learn library (http://scikit-learn.org/stable/index.html).
+
+constants.m and constants.py contain root of Caffe and images and source code of the project. Change the values to correct paths.
+
+extract-features.m: Matlab code for visualizing responses and weights
+
+extract-features.py: Python code for visualizing responses and weights
+
+shrink-images.py: Shrink all images in a directory to smaller images with white padding
+	- First argument: path to directory
+	- fraction argument: how many times smaller the new image should be
+
+svm.py: Support vector machine code to classify responses of AlexNet.
+	- type1 argument: path to directory containing images of type 1
+	- type2 argument: path to directory containing images of type 2
+	- others argument: path to directory containing images of all other types
