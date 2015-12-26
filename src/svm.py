@@ -9,6 +9,7 @@ parser = argparse.ArgumentParser(description='')
 parser.add_argument('--type1')
 parser.add_argument('--type2')
 parser.add_argument('--others')
+#parser.add_argument('--save-variables', required=False)
 args = parser.parse_args()
 
 # Make sure that caffe is on the python path:
@@ -38,7 +39,7 @@ transformer.set_channel_swap('data', (2,1,0))
 datapoints = []
 datalabels = []
 
-pairs = [(args.type1, 0), (args.type2, 1), (args.others, 2)]
+pairs = [(args.type1, 1), (args.type2, 2), (args.others, 3)]
 
 for pair in pairs:
     for (dirpath, dirnames, filenames) in walk(pair[0]):
