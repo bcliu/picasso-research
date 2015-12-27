@@ -12,3 +12,5 @@ Or, possibly, your SVM classifier is just not generalized enough, not recognizin
 to make it truly able to generalize, YOU PROBABLY SHOULD USE IMAGES THAT INCLUDE EYES, INSTEAD OF JUST IMAGES OF EYES!! THINK!!! think, discover, finding root of trouble, that's the fun of doing research!!! dealing with the unknown!!!
 
 think of x axis as eye axis, y as nose axis. you need images that contain both eye and nose for the decision boundary to be generated correctly!!!! TRY THAT!!!
+
+TO REALLY FIT THE IDEA OF SVM, TRAIN SEPARATE CLASSIFIERS: WHETHER THIS CONTAINS AN EYE, CONTAINS A NOSE, ETC. INSTEAD OF MERGING THEM INTO ONE!!!
