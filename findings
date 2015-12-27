@@ -1,0 +1,14 @@
+Dec 27
+Keep shrinking image of eye. When white space width is only 2x eye width, SVM no longer able to classify the image as an eye. Originally it's about 3x width of eye
+Keep painting on the eye image, still able to classify, until the image is messed up really badly
+
+Still able to correctly classify fc6 after enlarge the white space, image size to 1200px x 1200px, (original size: 400x400!)
+
+When combining an eye image and nose image, SVM classified to "Other"!! Why?? does it mean shouldn't assume fc6 features are additive??
+Or, possibly, your SVM classifier is just not generalized enough, not recognizing the fundamental differences between eye and nose
+
+!!! why not just try SVM on eyes and noses and see what it gives you? Research is doing experiments!!!!! Cool
+
+to make it truly able to generalize, YOU PROBABLY SHOULD USE IMAGES THAT INCLUDE EYES, INSTEAD OF JUST IMAGES OF EYES!! THINK!!! think, discover, finding root of trouble, that's the fun of doing research!!! dealing with the unknown!!!
+
+think of x axis as eye axis, y as nose axis. you need images that contain both eye and nose for the decision boundary to be generated correctly!!!! TRY THAT!!!
