@@ -14,3 +14,11 @@ to make it truly able to generalize, YOU PROBABLY SHOULD USE IMAGES THAT INCLUDE
 think of x axis as eye axis, y as nose axis. you need images that contain both eye and nose for the decision boundary to be generated correctly!!!! TRY THAT!!!
 
 TO REALLY FIT THE IDEA OF SVM, TRAIN SEPARATE CLASSIFIERS: WHETHER THIS CONTAINS AN EYE, CONTAINS A NOSE, ETC. INSTEAD OF MERGING THEM INTO ONE!!!
+
+
+IS THERE A WAY TO KNOW WHERE THE NN THINKS THE EYE IS??
+
+IF YOU HAVE BUILT A CLASSIFIER THAT TELLS YOU IF THE IMAGE CONTAINS AN EYE -- WHAT DOES IT MEAN? WHAT ARE THE APPLICATIONS?
+FIND PAPERS RELATED TO THIS!!!!
+
+you have far more dimensions than images -- meaning it's definitely leaning towards overfitting!!
