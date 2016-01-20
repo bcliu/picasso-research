@@ -5,3 +5,4 @@ references/visualize_dl-master/constants.py
 *.log
 *.so
 *.pyc
+*.dump

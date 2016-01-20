@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import pickle
 
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('--yesimages', default=research_root + 'images/eyes/normal/sm/', required=False)
-parser.add_argument('--noimages', default=research_root + 'images/others/sm/', required=False)
+parser.add_argument('--yesimages', default=research_root + 'images/flickr/eyes-yes/', required=False)
+parser.add_argument('--noimages', default=research_root + 'images/flickr/flickr_other/', required=False)
 parser.add_argument('--dump', help='dump variables to files for fast loading', action='store_true')
 parser.add_argument('--loaddump', help='load dumped variables', action='store_true')
 args = parser.parse_args()
@@ -52,7 +52,7 @@ def load_image(path):
 def predict():
     return clf.predict([net.blobs['fc6'].data[0].tolist()])
 
-dump_filename = 'svm-2-classes-data.dump'
+dump_filename = 'svm2c-datapoints.dump'
 if args.loaddump == False:
 
     for pair in pairs:
@@ -83,6 +83,7 @@ for pair in pairs:
     for (dirpath, dirnames, filenames) in walk(pair[0]):
         for filename in filenames:
             path = os.path.abspath(os.path.join(dirpath, filename))
+            print "Loaded ", path
             num_data = num_data + 1
             load_image(path)
             prediction = predict()
