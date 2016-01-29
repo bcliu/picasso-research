@@ -13,12 +13,14 @@ query = sys.argv[1]
 query_ = query.replace(' ', '_')
 path = sys.argv[2]
 num_to_download = int(sys.argv[3])
+start_from_page = int(sys.argv[4])
+start_from_image_id = int(sys.argv[5])
 
 print 'Searching for ' + query + ', sorted by ' + SORT_BY
 print 'Downloading ' + str(num_to_download)
 
 num_downloaded = 0
-current_page = 0
+current_page = start_from_page - 1
 
 while num_downloaded <= num_to_download:
     current_page = current_page + 1
