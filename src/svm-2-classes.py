@@ -13,6 +13,7 @@ parser.add_argument('--noimages', default=research_root + 'images/flickr/flickr_
 parser.add_argument('--dump', help='dump variables to files for fast loading', action='store_true')
 parser.add_argument('--dumppath', help='path to save dump file', default='svm2c-data.dump', required=False)
 parser.add_argument('--loaddump', help='load dumped variables', action='store_true')
+parser.add_argument('--layer', help='which layer in AlexNet to use for training and classification', default='pool5', required=False)
 args = parser.parse_args()
 
 # Make sure that caffe is on the python path:
@@ -22,7 +23,13 @@ sys.path.insert(0, caffe_root + 'python')
 import caffe
 from sklearn import svm
 
-LAYER_TO_USE = 'pool5'
+LAYER_TO_USE = args.layer
+
+print 'Using ' + LAYER_TO_USE + ' layer for training'
+if args.dump:
+    print 'Saving variables dump to ' + args.dumppath
+if args.loaddump:
+    print 'Loading variables dump from ' + args.dumppath
 
 imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
