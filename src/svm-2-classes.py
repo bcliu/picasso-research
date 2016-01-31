@@ -11,6 +11,7 @@ parser = argparse.ArgumentParser(description='')
 parser.add_argument('--yesimages', default=research_root + 'images/flickr/eyes-yes/', required=False)
 parser.add_argument('--noimages', default=research_root + 'images/flickr/flickr_other/', required=False)
 parser.add_argument('--dump', help='dump variables to files for fast loading', action='store_true')
+parser.add_argument('--dumppath', help='path to save dump file', default='svm2c-data.dump', required=False)
 parser.add_argument('--loaddump', help='load dumped variables', action='store_true')
 args = parser.parse_args()
 
@@ -20,6 +21,8 @@ sys.path.insert(0, caffe_root + 'python')
 
 import caffe
 from sklearn import svm
+
+LAYER_TO_USE = 'pool5'
 
 imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
@@ -50,9 +53,14 @@ def load_image(path):
     out = net.forward()
 
 def predict():
-    return clf.predict([net.blobs['fc6'].data[0].tolist()])
+    layer_data = net.blobs[LAYER_TO_USE].data[0]
+    if layer_data.size != len(layer_data):
+        # Flatten it
+        layer_data = np.reshape(layer_data, layer_data.size)
 
-dump_filename = 'svm2c-datapoints.dump'
+    return clf.predict([layer_data.tolist()])
+
+dump_filename = args.dumppath
 if args.loaddump == False:
 
     for pair in pairs:
@@ -60,7 +68,12 @@ if args.loaddump == False:
             for filename in filenames:
                 path = os.path.abspath(os.path.join(dirpath, filename))
                 load_image(path)
-                datapoints.append(net.blobs['fc6'].data[0].tolist())
+                layer_data = net.blobs[LAYER_TO_USE].data[0]
+                if layer_data.size != len(layer_data):
+                    # Flatten it
+                    layer_data = np.reshape(layer_data, layer_data.size)
+
+                datapoints.append(layer_data.tolist())
                 datalabels.append(pair[1])
 
                 print 'Processed ' + path + ' as type ' + str(pair[1])
