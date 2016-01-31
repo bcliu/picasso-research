@@ -99,15 +99,11 @@ else:
 num_data = 0
 num_correctly_classified = 0
 
-for pair in pairs:
-    for (dirpath, dirnames, filenames) in walk(pair[0]):
-        for filename in filenames:
-            path = os.path.abspath(os.path.join(dirpath, filename))
-            print "Loaded ", path
-            num_data = num_data + 1
-            load_image(path)
-            prediction = predict()
-            if prediction[0].astype('str') == str(pair[1]):
-                num_correctly_classified = num_correctly_classified + 1
+for i in range(len(datapoints)):
+    num_data = num_data + 1
+    print 'Tested ' + str(num_data)
+    prediction = clf.predict([datapoints[i]])
+    if prediction[0].astype('str') == str(datalabels[i]):
+        num_correctly_classified = num_correctly_classified + 1
 
 print "Out of " + str(num_data) + " training examples, " + str(num_correctly_classified) + " were correctly classified"
