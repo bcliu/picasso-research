@@ -14,6 +14,7 @@ parser.add_argument('--dump', help='dump variables to files for fast loading', a
 parser.add_argument('--dumppath', help='path to save dump file', default='svm2c-data.dump', required=False)
 parser.add_argument('--loaddump', help='load dumped variables', action='store_true')
 parser.add_argument('--layer', help='which layer in AlexNet to use for training and classification', default='pool5', required=False)
+parser.add_argument('--skiptest', action='store_true')
 args = parser.parse_args()
 
 # Make sure that caffe is on the python path:
@@ -106,15 +107,16 @@ else:
     f.close()
     print 'Loading finished.'
 
-num_data = 0
-num_correctly_classified = 0
+if !args.skiptest:
+    num_data = 0
+    num_correctly_classified = 0
 
-for i in range(len(datapoints)):
-    num_data = num_data + 1
-    prediction = clf.predict([datapoints[i]])
-    if prediction[0].astype('str') == str(datalabels[i]):
-        num_correctly_classified = num_correctly_classified + 1
+    for i in range(len(datapoints)):
+        num_data = num_data + 1
+        prediction = clf.predict([datapoints[i]])
+        if prediction[0].astype('str') == str(datalabels[i]):
+            num_correctly_classified = num_correctly_classified + 1
 
-    print 'Tested ' + str(num_data) + ', expected ' + str(datalabels[i]) + ', predicted ' + prediction[0].astype('str')
+        print 'Tested ' + str(num_data) + ', expected ' + str(datalabels[i]) + ', predicted ' + prediction[0].astype('str')
 
-print "Out of " + str(num_data) + " training examples, " + str(num_correctly_classified) + " were correctly classified"
+    print "Out of " + str(num_data) + " training examples, " + str(num_correctly_classified) + " were correctly classified"
