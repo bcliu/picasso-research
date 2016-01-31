@@ -67,6 +67,14 @@ def predict():
 
     return clf.predict([layer_data.tolist()])
 
+def test_on_dir(path):
+    for (dirpath, dirnames, filenames) in walk(path):
+        for filename in filenames:
+            path = os.path.abspath(os.path.join(dirpath, filename))
+            load_image(path)
+            prediction = predict()
+            print 'Prediction for ' + path + ': ' + prediction[0].astype('str')
+
 dump_filename = args.dumppath
 if args.loaddump == False:
 
@@ -92,18 +100,21 @@ if args.loaddump == False:
         pickle.dump([datapoints, datalabels, clf], f)
         f.close()
 else:
+    print 'Loading variables dump......'
     f = open(dump_filename)
     datapoints, datalabels, clf = pickle.load(f)
     f.close()
+    print 'Loading finished.'
 
 num_data = 0
 num_correctly_classified = 0
 
 for i in range(len(datapoints)):
     num_data = num_data + 1
-    print 'Tested ' + str(num_data)
     prediction = clf.predict([datapoints[i]])
     if prediction[0].astype('str') == str(datalabels[i]):
         num_correctly_classified = num_correctly_classified + 1
+
+    print 'Tested ' + str(num_data) + ', expected ' + str(datalabels[i]) + ', predicted ' + prediction[0].astype('str')
 
 print "Out of " + str(num_data) + " training examples, " + str(num_correctly_classified) + " were correctly classified"
