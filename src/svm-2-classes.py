@@ -107,7 +107,7 @@ else:
     f.close()
     print 'Loading finished.'
 
-if !args.skiptest:
+if not args.skiptest:
     num_data = 0
     num_correctly_classified = 0
 
