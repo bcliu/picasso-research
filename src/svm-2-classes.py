@@ -10,10 +10,14 @@ import pickle
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--yesimages', default=research_root + 'images/flickr/eyes-yes/', required=False)
 parser.add_argument('--noimages', default=research_root + 'images/flickr/flickr_other/', required=False)
+
 parser.add_argument('--dump', help='dump variables to files for fast loading', action='store_true')
 parser.add_argument('--dumppath', help='path to save dump file', default='svm2c-data.dump', required=False)
 parser.add_argument('--loaddump', help='load dumped variables', action='store_true')
+
 parser.add_argument('--layer', help='which layer in AlexNet to use for training and classification', default='pool5', required=False)
+# Default value means take the entire kernel
+parser.add_argument('--kernelsize', help='what square size to take from the center of kernel to use for training and classification', default=0, required=False)
 parser.add_argument('--skiptest', action='store_true')
 args = parser.parse_args()
 
@@ -54,13 +58,27 @@ def load_image(path):
     net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(path))
     out = net.forward()
 
-def predict():
+def layer_to_svm_data(net):
+    ''' Take the layer data from a Caffe instance, crop the filters if necessary,
+        and return a 1D array for training and classification
+    '''
     layer_data = net.blobs[LAYER_TO_USE].data[0]
     if layer_data.size != len(layer_data):
-        # Flatten it
+        # Flatten it if the data is multidimensional
+        # Also, the kernelsize parameter only makes sense here
+        kernelsize = int(args.kernelsize)
+        if kernelsize != 0:
+            # Crop the center of the kernel of specified size
+            # How many points to skip from the left and the top
+            # Assuming layer_data[i] is a square
+            skip = int((len(layer_data[0]) - kernelsize) / 2)
+            layer_data = layer_data[:, skip:(skip+kernelsize), skip:(skip+kernelsize)]
         layer_data = np.reshape(layer_data, layer_data.size)
 
-    return clf.predict([layer_data.tolist()])
+    return layer_data.tolist()
+
+def predict():
+    return clf.predict([layer_to_svm_data(net)])
 
 def test_on_dir(path):
     for (dirpath, dirnames, filenames) in walk(path):
@@ -84,12 +102,7 @@ if args.loaddump == False:
             for filename in filenames:
                 path = os.path.abspath(os.path.join(dirpath, filename))
                 load_image(path)
-                layer_data = net.blobs[LAYER_TO_USE].data[0]
-                if layer_data.size != len(layer_data):
-                    # Flatten it
-                    layer_data = np.reshape(layer_data, layer_data.size)
-
-                datapoints.append(layer_data.tolist())
+                datapoints.append(layer_to_svm_data(net))
                 datalabels.append(pair[1])
 
                 print 'Processed ' + path + ' as type ' + str(pair[1])
