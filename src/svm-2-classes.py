@@ -26,12 +26,6 @@ from sklearn import svm
 
 LAYER_TO_USE = args.layer
 
-print 'Using ' + LAYER_TO_USE + ' layer for training'
-if args.dump:
-    print 'Saving variables dump to ' + args.dumppath
-if args.loaddump:
-    print 'Loading variables dump from ' + args.dumppath
-
 imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
 
@@ -75,6 +69,12 @@ def test_on_dir(path):
             load_image(path)
             prediction = predict()
             print 'Prediction for ' + path + ': ' + prediction[0].astype('str')
+
+print 'Using ' + LAYER_TO_USE + ' layer for training'
+if args.dump:
+    print 'Saving variables dump to ' + args.dumppath
+if args.loaddump:
+    print 'Loading variables dump from ' + args.dumppath
 
 dump_filename = args.dumppath
 if args.loaddump == False:

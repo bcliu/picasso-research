@@ -26,16 +26,22 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
         center_width = int(center_height * 1.0 / old_height * old_width)
 
         old_im = old_im.resize((center_width, center_height), Image.ANTIALIAS)
-        im.putalpha(255)
+        old_im.putalpha(255)
         # Different values this time after resizing
         old_width, old_height = old_im.size
 
         # Smooth out the edge if toggled
         if args.smoothedge:
             pixels = old_im.load()
-            for y in range(int(old_height * 0.2)):
-                alpha = 
+            # Create a transparency gradient 20% of center image height
+            gradient_height = int(old_height * 0.2)
+            for y in range(gradient_height):
+                new_alpha = int(y * 1.0 / gradient_height * 255)
+                for x in range(old_width):
+                    print pixels[x, y][:3]
+                    pixels[x, y] = pixels[x, y][:3] + (new_alpha, )
 
+        old_im.save('lol.jpg')
         new_im.paste(old_im, ((new_size[0]-old_width)/2,
                               (new_size[1]-old_height)/2))
 
