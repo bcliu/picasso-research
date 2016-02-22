@@ -37,7 +37,11 @@ plt.rcParams['figure.figsize'] = (10, 10)
 plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
 
-caffe.set_mode_cpu()
+if mode == 'cpu':
+    caffe.set_mode_cpu()
+else:
+    caffe.set_mode_gpu()
+
 net = caffe.Net(caffe_root + 'models/bvlc_reference_caffenet/deploy.prototxt',
                 caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel',
                 caffe.TEST)
