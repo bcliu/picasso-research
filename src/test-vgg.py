@@ -72,6 +72,13 @@ def sample(width, height, number):
 
 sample_mask = []
 
+# Array of vectors
+vectors = []
+# Array of file paths
+vec_origin_file = []
+# Array of (arrays of (x, y))
+vec_location = []
+
 # Loop through every image in the given directory
 for (dirpath, dirnames, filenames) in walk(args.images):
     for filename in filenames:
@@ -88,3 +95,11 @@ for (dirpath, dirnames, filenames) in walk(args.images):
             print str(num_responses) + ' filters of ' + str(height_response) + 'x' + str(width_response)
 
             sample_mask = sample(width_response, height_response, float(args.sample_fraction))
+
+        for y in range(height_response):
+            for x in range(width_response):
+                if sample_mask[y][x]:
+                    ## NOTE: DOUBLE CHECK IF FIRST IS Y SECOND IS X, corresponding to images
+                    vectors.append(response[:, y, x])
+                    vec_origin_file.append(path)
+                    vec_location.append((x, y))
