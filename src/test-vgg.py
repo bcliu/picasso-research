@@ -48,10 +48,11 @@ net.blobs['data'].reshape(1, 3, 224, 224)
 def load_image(path, echo=True):
     net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(path))
     out = net.forward()
-    print("Predicted class is #{}.".format(out['prob'][0].argmax()))
+    if echo:
+        print("Predicted class is #{}.".format(out['prob'][0].argmax()))
 
-    top_k = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
-    print labels[top_k]
+        top_k = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
+        print labels[top_k]
 
 load_image('/home/chenl/research/images/bulls/bull2.jpg')
 
@@ -62,7 +63,7 @@ def sample(width, height, number):
     prob_true = number * 1.0 / width / height
     for x in range(width):
         for y in range(height):
-            mat[y][x] = False if np.random.random() < prob_true else True
+            mat[y][x] = True if np.random.random() < prob_true else False
 
     return mat
 
@@ -94,7 +95,7 @@ for (dirpath, dirnames, filenames) in walk(args.images):
             # sample_mask not initialized yet; sample new
             print str(num_responses) + ' filters of ' + str(height_response) + 'x' + str(width_response)
 
-            sample_mask = sample(width_response, height_response, float(args.sample_fraction))
+            sample_mask = sample(width_response, height_response, args.sample_fraction * width_response * height_response)
 
         for y in range(height_response):
             for x in range(width_response):
