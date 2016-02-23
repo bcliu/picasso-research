@@ -11,13 +11,26 @@ import pickle
 import sys
 sys.path.insert(0, caffe_root + 'python')
 
+parser = argparse.ArgumentParser(description='')
+parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/', required=False)
+parser.add_argument('--layer', default='conv2_1', required=False)
+parser.add_argument('--sample_fraction', default=0.3, required=False)
+args = parser.parse_args()
+
+print 'Loading images from ' + args.images
+print 'Sampling ' + str(args.sample_fraction) + ' of responses from layer ' + args.layer
+
 import caffe
 
 imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
 
-caffe.set_mode_cpu()
-net = caffe.Net(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototext',
+if mode == 'cpu':
+    caffe.set_mode_cpu()
+else:
+    caffe.set_mode_gpu()
+
+net = caffe.Net(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
                 caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
                 caffe.TEST)
 
@@ -31,7 +44,8 @@ transformer.set_channel_swap('data', (2,1,0))
 # NOTE: maybe can use batching to speed up processing?
 net.blobs['data'].reshape(1, 3, 224, 224)
 
-def load_image(path):
+
+def load_image(path, echo=True):
     net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(path))
     out = net.forward()
     print("Predicted class is #{}.".format(out['prob'][0].argmax()))
@@ -40,6 +54,7 @@ def load_image(path):
     print labels[top_k]
 
 load_image('/home/chenl/research/images/bulls/bull2.jpg')
+
 
 # Find better way to write it to distribute more evenly
 def sample(width, height, number):
@@ -52,3 +67,24 @@ def sample(width, height, number):
     return mat
 
 
+## NOTE: Resize every image to 224x224, or resize but keep original ratio? Does it affect things?
+## Without resizing, feeding into data, does it crop or will resize?
+
+sample_mask = []
+
+# Loop through every image in the given directory
+for (dirpath, dirnames, filenames) in walk(args.images):
+    for filename in filenames:
+        path = os.path.abspath(os.path.join(dirpath, filename))
+        load_image(path, False)
+
+        response = net.blobs[args.layer].data[0]
+        num_responses = len(response)
+        height_response = len(response[0])
+        width_response = len(response[0][0])
+
+        if len(sample_mask) == 0:
+            # sample_mask not initialized yet; sample new
+            print str(num_responses) + ' filters of ' + str(height_response) + 'x' + str(width_response)
+
+            sample_mask = sample(width_response, height_response, float(args.sample_fraction))
