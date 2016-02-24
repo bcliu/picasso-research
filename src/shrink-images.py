@@ -16,7 +16,7 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
     for filename in filenames:
         old_im = Image.open(dirpath + "/" + filename)
 
-        whole_img_dim = 400
+        whole_img_dim = 224
         new_size = (whole_img_dim, whole_img_dim)
 
         new_im = Image.new("RGB", new_size, (255, 255, 255, 255))
@@ -41,7 +41,7 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
                     print pixels[x, y][:3]
                     pixels[x, y] = pixels[x, y][:3] + (new_alpha, )
 
-        old_im.save('lol.jpg')
+        #old_im.save('lol.jpg')
         new_im.paste(old_im, ((new_size[0]-old_width)/2,
                               (new_size[1]-old_height)/2))
 

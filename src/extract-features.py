@@ -46,6 +46,7 @@ transformer.set_transpose('data', (2,0,1))
 transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1)) # mean pixel
 transformer.set_raw_scale('data', 255)  # the reference model operates on images in [0,255] range instead of [0,1]
 transformer.set_channel_swap('data', (2,1,0))
+net.blobs['data'].reshape(50,3,227,227)
 
 net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(args.path))
 out = net.forward()

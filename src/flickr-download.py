@@ -19,7 +19,7 @@ start_from_image_id = int(sys.argv[5])
 print 'Searching for ' + query + ', sorted by ' + SORT_BY
 print 'Downloading ' + str(num_to_download)
 
-num_downloaded = 0
+num_downloaded = start_from_image_id - 1
 current_page = start_from_page - 1
 
 while num_downloaded <= num_to_download:

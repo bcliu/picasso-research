@@ -5,7 +5,7 @@ from os import walk
 import os
 
 block_dim = 100
-whole_img_dim = 400
+whole_img_dim = 224
 whole_img_size = (whole_img_dim, whole_img_dim)
 paste_at_x = (whole_img_dim - block_dim) / 2
 paste_at_y = (whole_img_dim - block_dim) / 2
