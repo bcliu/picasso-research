@@ -3,9 +3,14 @@ import argparse
 from os import walk
 import os
 
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 import pickle
+
+plt.rcParams['figure.figsize'] = (10, 10)
+plt.rcParams['image.interpolation'] = 'nearest'
+plt.rcParams['image.cmap'] = 'gray'
 
 # Make sure that caffe is on the python path:
 import sys
@@ -13,8 +18,9 @@ sys.path.insert(0, caffe_root + 'python')
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/', required=False)
-parser.add_argument('--layer', default='conv2_1', required=False)
+parser.add_argument('--layer', default='conv4_1', required=False)
 parser.add_argument('--sample_fraction', default=0.3, required=False)
+parser.add_argument('--n_clusters', default=32, required=False)
 args = parser.parse_args()
 
 print 'Loading images from ' + args.images
@@ -54,8 +60,6 @@ def load_image(path, echo=True):
         top_k = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
         print labels[top_k]
 
-load_image('/home/chenl/research/images/bulls/bull2.jpg')
-
 
 # Find better way to write it to distribute more evenly
 def sample(width, height, number):
@@ -84,6 +88,7 @@ vec_location = []
 for (dirpath, dirnames, filenames) in walk(args.images):
     for filename in filenames:
         path = os.path.abspath(os.path.join(dirpath, filename))
+        print 'Processed', path
         load_image(path, False)
 
         response = net.blobs[args.layer].data[0]
@@ -95,7 +100,7 @@ for (dirpath, dirnames, filenames) in walk(args.images):
             # sample_mask not initialized yet; sample new
             print str(num_responses) + ' filters of ' + str(height_response) + 'x' + str(width_response)
 
-            sample_mask = sample(width_response, height_response, args.sample_fraction * width_response * height_response)
+            sample_mask = sample(width_response, height_response, float(args.sample_fraction) * width_response * height_response)
 
         for y in range(height_response):
             for x in range(width_response):
@@ -104,3 +109,85 @@ for (dirpath, dirnames, filenames) in walk(args.images):
                     vectors.append(response[:, y, x])
                     vec_origin_file.append(path)
                     vec_location.append((x, y))
+
+
+print 'Got', len(vectors), 'vectors in total for clustering'
+
+# TRY PCA, ICA AS WELL!!!
+# if this method works, continue to explore how to make your initial method work as well
+from sklearn import metrics
+from sklearn.cluster import KMeans
+from sklearn.datasets import load_digits
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import scale
+
+import get_receptive_field as rf
+
+n_clusters = int(args.n_clusters)
+n_restarts = 10
+kmeans_obj = KMeans(init='k-means++', n_clusters=n_clusters, n_init=n_restarts)
+predicted = kmeans_obj.fit_predict(vectors)
+
+
+def view_nth_in_cluster(cluster_i, i):
+    num_in_cluster_seen = 0
+    for vec_id in range(len(vectors)):
+        if predicted[vec_id] == cluster_i:
+            if num_in_cluster_seen == i:
+                print 'Showing the ' + str(vec_id) + 'th element in vectors array, at ', vec_location[vec_id]
+                rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
+                print 'Receptive field: ', rec_field
+                
+                # CHECK IF YOU GET X AND Y RIGHT
+                print 'From file:', vec_origin_file[vec_id]
+                load_image(vec_origin_file[vec_id])
+
+                #fig = plt.figure()
+                #fig.add_subplot(1, 2, 1)
+                plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:rec_field[3],rec_field[0]:rec_field[2]]))
+                #fig.add_subplot(1, 2, 2)
+                #plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,20:60, 40:60]))
+                plt.show()
+                return
+            else:
+                num_in_cluster_seen = num_in_cluster_seen + 1
+
+
+# View n images in the cluster_i-th cluster that are closest to the center
+def view_nth_cluster(cluster_i, n):
+    fig = plt.figure()
+    fig_id = 1
+    dim_plot = math.floor(math.sqrt(n))
+    if dim_plot * dim_plot < n:
+        dim_plot = dim_plot + 1
+
+    plt.axis('off')
+
+    scores = []
+    for vec_id in range(len(vectors)):
+        if predicted[vec_id] == cluster_i:
+            scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
+            # THE SCORES IT GIVES ARE VERY SUSPICIOUS -- SIMILAR VALUES
+
+    scores.sort(key=lambda tup: tup[1])
+
+    for (vec_id, score) in scores:
+        print 'Vector #', vec_id, 'with score', score
+
+        fig.add_subplot(dim_plot, dim_plot, fig_id)
+
+        rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
+        load_image(vec_origin_file[vec_id])
+        plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:rec_field[3],rec_field[0]:rec_field[2]]))
+
+        fig_id = fig_id + 1
+
+        if fig_id > n:
+            plt.show()
+            return
+
+    plt.show()
+
+
+def view_n_from_clusters(from_cluster, to_cluster, n_each):
+    return

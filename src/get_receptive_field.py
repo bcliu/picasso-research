@@ -55,6 +55,8 @@ layer_dims = {
     'pool3': 28
 }
 
+dim_input = 224
+
 prev_layers = {}
 # Build dictionary that maps one layer to its prev layer
 for i in range(len(layers) - 1):
@@ -130,11 +132,27 @@ def get_pool_neuron_rec_field(layer, neuron_x, neuron_y):
             last_layer_br_rec_field[2], last_layer_br_rec_field[3]]
 
 
+def cap_value(v, maximum):
+    if v < 0:
+        return 0
+    elif v > maximum:
+        return maximum
+    else:
+        return v
+
+
 def get_receptive_field(layer, x, y):
     rec_field = None
     if layer.startswith('pool'):
         rec_field = get_pool_neuron_rec_field(layer, x, y)
     elif layer.startswith('conv'):
         rec_field = get_conv_neuron_rec_field(layer, x, y)
+
+    # Must be a square
+    assert(rec_field[2] - rec_field[0] == rec_field[3] - rec_field[1])
+
+    # Cap the values at boundaries of the image
+    for i in range(len(rec_field)):
+        rec_field[i] = cap_value(rec_field[i], dim_input - 1)
 
     return rec_field
