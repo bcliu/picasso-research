@@ -140,18 +140,30 @@ def view_nth_in_cluster(cluster_i, i):
                 
                 # CHECK IF YOU GET X AND Y RIGHT
                 print 'From file:', vec_origin_file[vec_id]
-                load_image(vec_origin_file[vec_id])
+                load_image(vec_origin_file[vec_id], False)
 
                 #fig = plt.figure()
                 #fig.add_subplot(1, 2, 1)
                 plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:rec_field[3],rec_field[0]:rec_field[2]]))
                 #fig.add_subplot(1, 2, 2)
                 #plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,20:60, 40:60]))
+                #plt.axis('off')
                 plt.show()
                 return
             else:
                 num_in_cluster_seen = num_in_cluster_seen + 1
 
+
+
+def get_top_n_in_cluster(cluster_i, n):
+    scores = []
+    for vec_id in range(len(vectors)):
+        if predicted[vec_id] == cluster_i:
+            scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
+            # THE SCORES IT GIVES ARE VERY SUSPICIOUS -- SIMILAR VALUES
+
+    scores.sort(key=lambda tup: -tup[1])
+    return scores[0:n]
 
 # View n images in the cluster_i-th cluster that are closest to the center
 def view_nth_cluster(cluster_i, n):
@@ -161,15 +173,7 @@ def view_nth_cluster(cluster_i, n):
     if dim_plot * dim_plot < n:
         dim_plot = dim_plot + 1
 
-    plt.axis('off')
-
-    scores = []
-    for vec_id in range(len(vectors)):
-        if predicted[vec_id] == cluster_i:
-            scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
-            # THE SCORES IT GIVES ARE VERY SUSPICIOUS -- SIMILAR VALUES
-
-    scores.sort(key=lambda tup: tup[1])
+    scores = get_top_n_in_cluster(cluster_i, n)
 
     for (vec_id, score) in scores:
         print 'Vector #', vec_id, 'with score', score
@@ -177,9 +181,9 @@ def view_nth_cluster(cluster_i, n):
         fig.add_subplot(dim_plot, dim_plot, fig_id)
 
         rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
-        load_image(vec_origin_file[vec_id])
-        plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:rec_field[3],rec_field[0]:rec_field[2]]))
-
+        load_image(vec_origin_file[vec_id], False)
+        plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:rec_field[3]+1, rec_field[0]:rec_field[2]+1]))
+        plt.axis('off')
         fig_id = fig_id + 1
 
         if fig_id > n:
@@ -188,6 +192,24 @@ def view_nth_cluster(cluster_i, n):
 
     plt.show()
 
-
 def view_n_from_clusters(from_cluster, to_cluster, n_each):
+    fig = plt.figure()
+    fig_id = 1
+
+    for i in range(from_cluster, to_cluster+1):
+        scores = get_top_n_in_cluster(i, n_each)
+        for (vec_id, score) in scores:
+            print 'Vector #', vec_id, 'in cluster #', i, ', score:', score
+            fig.add_subplot(to_cluster - from_cluster + 1, n_each, fig_id)
+            
+            rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
+            load_image(vec_origin_file[vec_id], False)
+            plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:rec_field[3]+1, rec_field[0]:rec_field[2]+1]))
+
+            fig_id = fig_id + 1
+
+            plt.axis('off')
+    
+    plt.show()
+
     return
