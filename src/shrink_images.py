@@ -5,6 +5,7 @@ from os import walk
 parser = argparse.ArgumentParser(description='Shrink image sizes with white padding')
 parser.add_argument('load_from_path')
 parser.add_argument('save_to_path')
+parser.add_argument('output_dim')
 parser.add_argument('--ratio', default=6, required=False)
 
 # Whether to smoothout the edge with transparency gradient
@@ -16,10 +17,10 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
     for filename in filenames:
         old_im = Image.open(dirpath + "/" + filename)
 
-        whole_img_dim = 224
+        whole_img_dim = int(args.output_dim)
         new_size = (whole_img_dim, whole_img_dim)
 
-        new_im = Image.new("RGB", new_size, (255, 255, 255, 255))
+        new_im = Image.new("RGB", new_size, (255, 255, 255))
         old_width, old_height = old_im.size
 
         center_height = whole_img_dim / int(args.ratio)
@@ -34,15 +35,37 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
         if args.smoothedge:
             pixels = old_im.load()
             # Create a transparency gradient 20% of center image height
-            gradient_height = int(old_height * 0.2)
+            y_gradient_percentage = 0.2
+            x_gradient_percentage = 0.2
+
+            gradient_height = int(old_height * y_gradient_percentage)
             for y in range(gradient_height):
                 new_alpha = int(y * 1.0 / gradient_height * 255)
                 for x in range(old_width):
-                    print pixels[x, y][:3]
                     pixels[x, y] = pixels[x, y][:3] + (new_alpha, )
 
-        #old_im.save('lol.jpg')
+                    bottom_y = old_height - 1 - y
+                    pixels[x, bottom_y] = pixels[x, bottom_y][:3] + (new_alpha, )
+
+            old_im.save(args.save_to_path + '/old_im_1.png')
+
+            gradient_width = int(old_width * x_gradient_percentage)
+            for x in range(gradient_width):
+                new_alpha = int(x * 1.0 / gradient_width * 255)
+                for y in range(old_height):
+                    new_alpha2 = 255 - (255 - pixels[x, y][3] + 255 - new_alpha)
+                    if new_alpha2 < 0:
+                        new_alpha2 = 0
+
+                    pixels[x, y] = pixels[x, y][:3] + (new_alpha2, )
+
+                    right_x = old_width - 1 - x
+                    pixels[right_x, y] = pixels[right_x, y][:3] + (new_alpha2, )
+
+        old_im.save(args.save_to_path + '/old_im_2.png')
+
         new_im.paste(old_im, ((new_size[0]-old_width)/2,
-                              (new_size[1]-old_height)/2))
+                              (new_size[1]-old_height)/2),
+                     mask=old_im.split()[3])
 
         new_im.save(args.save_to_path + "/" + filename)
