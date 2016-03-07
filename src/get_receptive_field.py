@@ -1,5 +1,3 @@
-from constants import *
-
 # Layers and parameters of VGG16
 layers = [
     'data',
@@ -16,7 +14,11 @@ layers = [
     'conv4_1',
     'conv4_2',
     'conv4_3',
-    'pool4'
+    'pool4',
+    'conv5_1',
+    'conv5_2',
+    'conv5_3',
+    'pool5'
 ]
 
 # [ pad, kernel_size ]
@@ -30,7 +32,10 @@ conv_params = {
     'conv3_3': [1, 3],
     'conv4_1': [1, 3],
     'conv4_2': [1, 3],
-    'conv4_3': [1, 3]
+    'conv4_3': [1, 3],
+    'conv5_1': [1, 3],
+    'conv5_2': [1, 3],
+    'conv5_3': [1, 3]
 }
 
 # [stride, kernel_size]
@@ -38,7 +43,8 @@ pool_params = {
     'pool1': [2, 2],
     'pool2': [2, 2],
     'pool3': [2, 2],
-    'pool4': [2, 2]
+    'pool4': [2, 2],
+    'pool5': [2, 2]
 }
 
 layer_dims = {
@@ -141,7 +147,7 @@ def cap_value(v, maximum):
         return v
 
 
-def get_receptive_field(layer, x, y):
+def get_receptive_field(layer, x, y, print_size=False):
     rec_field = None
     if layer.startswith('pool'):
         rec_field = get_pool_neuron_rec_field(layer, x, y)
@@ -155,4 +161,21 @@ def get_receptive_field(layer, x, y):
     for i in range(len(rec_field)):
         rec_field[i] = cap_value(rec_field[i], dim_input - 1)
 
+    if print_size:
+        print 'Size:', rec_field[3] - rec_field[0]
+
     return rec_field
+
+
+def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('layer')
+    parser.add_argument('x')
+    parser.add_argument('y')
+    args = parser.parse_args()
+
+    print get_receptive_field(args.layer, int(args.x), int(args.y), True)
+
+if __name__ == "__main__":
+    main()
