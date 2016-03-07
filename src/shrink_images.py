@@ -6,7 +6,7 @@ parser = argparse.ArgumentParser(description='Shrink image sizes with white padd
 parser.add_argument('load_from_path')
 parser.add_argument('save_to_path')
 parser.add_argument('output_dim')
-parser.add_argument('--ratio', default=6, required=False)
+parser.add_argument('long_edge_pixels')
 
 # Whether to smoothout the edge with transparency gradient
 parser.add_argument('--smoothedge', action='store_true', required=False)
@@ -23,8 +23,12 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
         new_im = Image.new("RGB", new_size, (255, 255, 255))
         old_width, old_height = old_im.size
 
-        center_height = whole_img_dim / int(args.ratio)
-        center_width = int(center_height * 1.0 / old_height * old_width)
+        if old_width >= old_height:
+            center_width = int(args.long_edge_pixels)
+            center_height = int(center_width * 1.0 / old_width * old_height)
+        else:
+            center_height = int(args.long_edge_pixels)
+            center_width = int(center_height * 1.0 / old_height * old_width)
 
         old_im = old_im.resize((center_width, center_height), Image.ANTIALIAS)
         old_im.putalpha(255)
@@ -47,8 +51,6 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
                     bottom_y = old_height - 1 - y
                     pixels[x, bottom_y] = pixels[x, bottom_y][:3] + (new_alpha, )
 
-            old_im.save(args.save_to_path + '/old_im_1.png')
-
             gradient_width = int(old_width * x_gradient_percentage)
             for x in range(gradient_width):
                 new_alpha = int(x * 1.0 / gradient_width * 255)
@@ -61,8 +63,6 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
 
                     right_x = old_width - 1 - x
                     pixels[right_x, y] = pixels[right_x, y][:3] + (new_alpha2, )
-
-        old_im.save(args.save_to_path + '/old_im_2.png')
 
         new_im.paste(old_im, ((new_size[0]-old_width)/2,
                               (new_size[1]-old_height)/2),
