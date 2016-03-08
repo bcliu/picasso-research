@@ -21,6 +21,8 @@ parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/
 parser.add_argument('--layer', default='conv4_1', required=False)
 parser.add_argument('--sample_fraction', default=0.3, required=False)
 parser.add_argument('--n_clusters', default=32, required=False)
+parser.add_argument('--center_only_path', default=None, required=False)
+parser.add_argument('--center_only_neuron_x', default=None, required=False)
 args = parser.parse_args()
 
 print 'Loading images from ' + args.images
@@ -110,6 +112,24 @@ for (dirpath, dirnames, filenames) in walk(args.images):
                     vec_origin_file.append(path)
                     vec_location.append((x, y))
 
+
+print 'Got', len(vectors), 'vectors randomly sampled'
+# Load the images of which only the center patches will be used
+if args.center_only_path is not None:
+    print 'Loading images of which center patches will be used'
+    location_to_pick = int(args.center_only_neuron_x)
+    print 'Center neuron x and y coordinate:', location_to_pick
+
+    for (dirpath, dirnames, filenames) in walk(args.center_only_path):
+        for filename in filenames:
+            path = os.path.abspath(os.path.join(dirpath, filename))
+            print 'Processed', path
+            load_image(path, False)
+
+            response = net.blobs[args.layer].data[0]
+            vectors.append(response[:, location_to_pick, location_to_pick])
+            vec_origin_file.append(path)
+            vec_location.append((location_to_pick, location_to_pick))
 
 print 'Got', len(vectors), 'vectors in total for clustering'
 
