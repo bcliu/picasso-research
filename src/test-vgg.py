@@ -38,15 +38,21 @@ if mode == 'cpu':
 else:
     caffe.set_mode_gpu()
 
-net = caffe.Net(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
-                caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
-                caffe.TEST)
+#net = caffe.Net(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
+#                caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
+#                caffe.TEST)
 
-transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
-transformer.set_transpose('data', (2,0,1))
-transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1)) # mean pixel
-transformer.set_raw_scale('data', 255)
-transformer.set_channel_swap('data', (2,1,0))
+#transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
+#transformer.set_transpose('data', (2,0,1))
+#transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1)) # mean pixel
+#transformer.set_raw_scale('data', 255)
+#transformer.set_channel_swap('data', (2,1,0))
+net = caffe.Classifier(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
+        caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
+        mean=np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1),
+        channel_swap=(2, 1, 0),
+        raw_scale=255,
+        image_dims=(224, 224))
 
 # Dimensions: 224x224, with 3 channels. Batch size 1
 # NOTE: maybe can use batching to speed up processing?
@@ -54,13 +60,14 @@ net.blobs['data'].reshape(1, 3, 224, 224)
 
 
 def load_image(path, echo=True):
-    net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(path))
-    out = net.forward()
-    if echo:
-        print("Predicted class is #{}.".format(out['prob'][0].argmax()))
+    net.predict([caffe.io.load_image(path)], oversample=False)
+    #net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(path))
+    #out = net.forward()
+    #if echo:
+    #    print("Predicted class is #{}.".format(out['prob'][0].argmax()))
 
-        top_k = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
-        print labels[top_k]
+    #    top_k = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
+    #    print labels[top_k]
 
 
 # Find better way to write it to distribute more evenly
@@ -108,7 +115,7 @@ for (dirpath, dirnames, filenames) in walk(args.images):
             for x in range(width_response):
                 if sample_mask[y][x]:
                     ## NOTE: DOUBLE CHECK IF FIRST IS Y SECOND IS X, corresponding to images
-                    vectors.append(response[:, y, x])
+                    vectors.append(response[:, y, x].copy())
                     vec_origin_file.append(path)
                     vec_location.append((x, y))
 
@@ -127,7 +134,7 @@ if args.center_only_path is not None:
             load_image(path, False)
 
             response = net.blobs[args.layer].data[0]
-            vectors.append(response[:, location_to_pick, location_to_pick])
+            vectors.append(response[:, location_to_pick, location_to_pick].copy())
             vec_origin_file.append(path)
             vec_location.append((location_to_pick, location_to_pick))
 
@@ -164,7 +171,7 @@ def view_nth_in_cluster(cluster_i, i):
 
                 #fig = plt.figure()
                 #fig.add_subplot(1, 2, 1)
-                plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:rec_field[3],rec_field[0]:rec_field[2]]))
+                plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:rec_field[3],rec_field[0]:rec_field[2]]))
                 #fig.add_subplot(1, 2, 2)
                 #plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,20:60, 40:60]))
                 #plt.axis('off')
@@ -202,7 +209,7 @@ def view_nth_cluster(cluster_i, n):
 
         rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
         load_image(vec_origin_file[vec_id], False)
-        plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:rec_field[3]+1, rec_field[0]:rec_field[2]+1]))
+        plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:rec_field[3]+1, rec_field[0]:rec_field[2]+1]))
         plt.axis('off')
         fig_id = fig_id + 1
 
@@ -224,7 +231,7 @@ def view_n_from_clusters(from_cluster, to_cluster, n_each):
             
             rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
             load_image(vec_origin_file[vec_id], False)
-            plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:rec_field[3]+1, rec_field[0]:rec_field[2]+1]))
+            plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:rec_field[3]+1, rec_field[0]:rec_field[2]+1]))
 
             fig_id = fig_id + 1
 
