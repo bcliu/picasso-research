@@ -162,7 +162,7 @@ def get_receptive_field(layer, x, y, print_size=False):
         rec_field[i] = cap_value(rec_field[i], dim_input - 1)
 
     if print_size:
-        print 'Size:', rec_field[3] - rec_field[0]
+        print 'Size:', rec_field[3] - rec_field[0] + 1
 
     return rec_field
 

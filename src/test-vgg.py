@@ -23,6 +23,7 @@ parser.add_argument('--sample_fraction', default=0.3, required=False)
 parser.add_argument('--n_clusters', default=32, required=False)
 parser.add_argument('--center_only_path', default=None, required=False)
 parser.add_argument('--center_only_neuron_x', default=None, required=False)
+parser.add_argument('--gpu', default=0, required=False)
 args = parser.parse_args()
 
 print 'Loading images from ' + args.images
@@ -33,6 +34,7 @@ import caffe
 imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
 
+caffe.set_device(int(args.gpu))
 if mode == 'cpu':
     caffe.set_mode_cpu()
 else:
@@ -155,6 +157,37 @@ n_restarts = 10
 kmeans_obj = KMeans(init='k-means++', n_clusters=n_clusters, n_init=n_restarts)
 predicted = kmeans_obj.fit_predict(vectors)
 
+##### PCA
+pca = PCA(n_components=80)
+#vectors_trans = pca.fit_transform(vectors)
+#print pca.explained_variance_ratio_
+#predicted = kmeans_obj.fit_predict(vectors_trans)
+
+
+#########
+from matplotlib.patches import Rectangle
+
+def find_patches_in_cluster(cluster_i, image_path):
+    # Given an image, find the patches in the image that have responses in the given cluster
+    load_image(image_path, False)
+    dim_filter = len(net.blobs[args.layer].data[0][0])
+    
+    plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0]))
+    axis = plt.gca()
+
+    for y in range(dim_filter):
+        for x in range(dim_filter):
+            hypercolumn = net.blobs[args.layer].data[0][:,y,x]
+            prediction = kmeans_obj.predict(hypercolumn)
+            if prediction == cluster_i:
+                rec_field = rf.get_receptive_field(args.layer, x, y)
+                #### NOTE: VERIFY THAT YOU GOT X AND Y RIGHT AGAIN!!!
+                axis.add_patch(Rectangle((rec_field[0], rec_field[1]), rec_field[2] - rec_field[0] + 1, rec_field[3] - rec_field[1] + 1, fill=False,
+                    edgecolor="red"))
+                #plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)]))
+                #plt.show()
+
+    plt.show()
 
 def view_nth_in_cluster(cluster_i, i):
     num_in_cluster_seen = 0
@@ -171,7 +204,7 @@ def view_nth_in_cluster(cluster_i, i):
 
                 #fig = plt.figure()
                 #fig.add_subplot(1, 2, 1)
-                plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:rec_field[3],rec_field[0]:rec_field[2]]))
+                plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)]))
                 #fig.add_subplot(1, 2, 2)
                 #plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,20:60, 40:60]))
                 #plt.axis('off')
@@ -187,7 +220,6 @@ def get_top_n_in_cluster(cluster_i, n):
     for vec_id in range(len(vectors)):
         if predicted[vec_id] == cluster_i:
             scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
-            # THE SCORES IT GIVES ARE VERY SUSPICIOUS -- SIMILAR VALUES
 
     scores.sort(key=lambda tup: -tup[1])
     return scores[0:n]
@@ -209,7 +241,7 @@ def view_nth_cluster(cluster_i, n):
 
         rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
         load_image(vec_origin_file[vec_id], False)
-        plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:rec_field[3]+1, rec_field[0]:rec_field[2]+1]))
+        plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:(rec_field[3]+1), rec_field[0]:(rec_field[2]+1)]))
         plt.axis('off')
         fig_id = fig_id + 1
 
@@ -231,7 +263,7 @@ def view_n_from_clusters(from_cluster, to_cluster, n_each):
             
             rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
             load_image(vec_origin_file[vec_id], False)
-            plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:rec_field[3]+1, rec_field[0]:rec_field[2]+1]))
+            plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:(rec_field[3]+1), rec_field[0]:(rec_field[2]+1)]))
 
             fig_id = fig_id + 1
 
