@@ -1,3 +1,6 @@
+# VARIABLES PICKLED: [args, net, sample_mask, vectors, vec_origin_file, vec_location, n_clusters, kmeans_obj, predicted]
+
+
 from constants import *
 import argparse
 from os import walk
@@ -167,7 +170,29 @@ pca = PCA(n_components=80)
 #########
 from matplotlib.patches import Rectangle
 
-def find_patches_in_cluster(cluster_i, image_path):
+def get_top_n_in_cluster(cluster_i, n):
+    scores = []
+    for vec_id in range(len(vectors)):
+        if predicted[vec_id] == cluster_i:
+            scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
+
+    scores.sort(key=lambda tup: -tup[1])
+    if n == -1:
+        return scores
+    return scores[0:n]
+
+
+## distance_threshold: require a vector to be smaller than distance of distance_threshold * num of vectors in cluster
+##                     for it to be considered as in this cluster
+## NOTE: CHECK THIS PART OF THRESHOLDING, TESTING
+def find_patches_in_cluster(cluster_i, image_path, dist_thres_percentage=1.0):
+    score_thres = 0.0
+    cluster_scores = get_top_n_in_cluster(cluster_i, -1) # All score values in this cluster
+    cluster_scores = [score for (vec_id, score) in cluster_scores]
+    # Figure out exact value of distance threshold given the percentage
+    score_thres = cluster_scores[int(math.floor(len(cluster_scores) * dist_thres_percentage)) - 1]
+    print 'Limiting cluster score to smaller than', score_thres
+
     # Given an image, find the patches in the image that have responses in the given cluster
     load_image(image_path, False)
     dim_filter = len(net.blobs[args.layer].data[0][0])
@@ -175,18 +200,27 @@ def find_patches_in_cluster(cluster_i, image_path):
     plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0]))
     axis = plt.gca()
 
+    total_patches_found = 0
+    patches_ignored = 0 # Number of patches that are in the cluster but ignored due to score
+
     for y in range(dim_filter):
         for x in range(dim_filter):
-            hypercolumn = net.blobs[args.layer].data[0][:,y,x]
+            hypercolumn = net.blobs[args.layer].data[0][:,y,x].copy().reshape(1, -1)
             prediction = kmeans_obj.predict(hypercolumn)
             if prediction == cluster_i:
-                rec_field = rf.get_receptive_field(args.layer, x, y)
-                #### NOTE: VERIFY THAT YOU GOT X AND Y RIGHT AGAIN!!!
-                axis.add_patch(Rectangle((rec_field[0], rec_field[1]), rec_field[2] - rec_field[0] + 1, rec_field[3] - rec_field[1] + 1, fill=False,
-                    edgecolor="red"))
-                #plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)]))
-                #plt.show()
+                total_patches_found = total_patches_found + 1
+                if kmeans_obj.score(hypercolumn) < score_thres:
+                    patches_ignored = patches_ignored + 1
+                else:
+                    rec_field = rf.get_receptive_field(args.layer, x, y)
+                    #### NOTE: VERIFY THAT YOU GOT X AND Y RIGHT AGAIN!!!
+                    axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
+                        rec_field[2] - rec_field[0] + 1,
+                        rec_field[3] - rec_field[1] + 1,
+                        fill=False, edgecolor="red"))
+                    #plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)]))
 
+    print 'Found', total_patches_found, 'patches in total,', patches_ignored, 'ignored due to distance'
     plt.show()
 
 def view_nth_in_cluster(cluster_i, i):
@@ -213,16 +247,6 @@ def view_nth_in_cluster(cluster_i, i):
             else:
                 num_in_cluster_seen = num_in_cluster_seen + 1
 
-
-
-def get_top_n_in_cluster(cluster_i, n):
-    scores = []
-    for vec_id in range(len(vectors)):
-        if predicted[vec_id] == cluster_i:
-            scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
-
-    scores.sort(key=lambda tup: -tup[1])
-    return scores[0:n]
 
 # View n images in the cluster_i-th cluster that are closest to the center
 def view_nth_cluster(cluster_i, n):
