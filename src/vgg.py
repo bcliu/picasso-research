@@ -3,10 +3,37 @@ import argparse
 from os import walk
 import os
 
+import matplotlib
+
+parser = argparse.ArgumentParser(description='')
+parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/', required=False)
+parser.add_argument('--layer', default='conv4_1', required=False)
+parser.add_argument('--sample_fraction', default=0.3, required=False)
+parser.add_argument('--n_clusters', default=32, required=False)
+
+parser.add_argument('--center_only_path', default=None, required=False)
+parser.add_argument('--center_only_neuron_x', default=None, required=False)
+
+parser.add_argument('--gpu', default=0, required=False)
+
+parser.add_argument('--load_layer_dump_from', default=None, required=False)
+parser.add_argument('--load_classification_dump_from', default=None, required=False)
+
+parser.add_argument('--save_layer_dump_to', default=None, required=False)
+parser.add_argument('--save_classification_dump_to', default=None, required=False)
+
+parser.add_argument('--save_plots_to', default=None, required=False)
+
+args = parser.parse_args()
+
+if args.save_plots_to is not None:
+    matplotlib.use('Agg')
+
+import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
+
 import math
 import numpy as np
-import matplotlib
-#import matplotlib.pyplot as plt
 import pickle
 
 from sklearn import metrics
@@ -14,10 +41,9 @@ from sklearn.cluster import KMeans
 from sklearn.datasets import load_digits
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
+from sklearn.manifold import TSNE
 
 import get_receptive_field as rf
-
-from matplotlib.patches import Rectangle
 
 # Make sure that caffe is on the python path:
 import sys
@@ -35,23 +61,9 @@ def sample(width, height, number):
 
     return mat
 
-parser = argparse.ArgumentParser(description='')
-parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/', required=False)
-parser.add_argument('--layer', default='conv4_1', required=False)
-parser.add_argument('--sample_fraction', default=0.3, required=False)
-parser.add_argument('--n_clusters', default=32, required=False)
-parser.add_argument('--center_only_path', default=None, required=False)
-parser.add_argument('--center_only_neuron_x', default=None, required=False)
-parser.add_argument('--gpu', default=0, required=False)
-parser.add_argument('--load_dump_from', default=None, required=False)
-parser.add_argument('--save_dump_to', default=None, required=False)
-parser.add_argument('--save_plots_to', default=None, required=False)
-
-args = parser.parse_args()
-
+# Force non-interative mode, if saving plots
 if args.save_plots_to is not None:
-    matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
+    plt.ioff()
 
 plt.rcParams['figure.figsize'] = (10, 10)
 plt.rcParams['image.interpolation'] = 'nearest'
@@ -107,15 +119,20 @@ vec_origin_file = []
 # Array of (arrays of (x, y))
 vec_location = []
 
-if args.load_dump_from is not None:
-    print 'Loading dump file from', args.load_dump_from
-    f = open(args.load_dump_from)
-    args_dump, sample_mask, vectors, vec_origin_file, vec_location, n_clusters, kmeans_obj, predicted = pickle.load(f)
-    if hasattr(args, 'load_dump_from'):
-        args_dump.load_dump_from = args.load_dump_from
-    if hasattr(args, 'save_dump_to'):
-        args_dump.save_dump_to = args.save_dump_to
-    args = args_dump
+if args.load_layer_dump_from is not None:
+    print 'Loading raw layer dump file from', args.load_layer_dump_from
+    f = open(args.load_layer_dump_from)
+    [args_images, args_layer, args_sample_fraction,
+        args_center_path, args_center_x,
+        sample_mask, vectors, vec_origin_file, vec_location] = pickle.load(f)
+    
+    args.images = args_images
+    args.layer = args_layer
+    args.sample_fraction = args_sample_fraction
+    args.center_only_path = args_center_path
+    args.center_only_neuron_x = args_center_x
+
+    n_clusters = int(args.n_clusters)
     f.close()
     print 'Finished loading dump.'
 else:
@@ -165,22 +182,52 @@ else:
                 vec_origin_file.append(path)
                 vec_location.append((location_to_pick, location_to_pick))
 
-    # TRY PCA, ICA AS WELL!!!
-    # if this method works, continue to explore how to make your initial method work as well
+    # Save data (layer) dump if parameter is specified
+    if args.save_layer_dump_to is not None:
+        print 'Saving layer data dump to', args.save_layer_dump_to
+        f = open(args.save_layer_dump_to, 'wb')
+        pickle.dump([args.images, args.layer, args.sample_fraction,
+            args.center_only_path, args.center_only_neuron_x,
+            sample_mask, vectors, vec_origin_file, vec_location], f)
+        f.close()
+        print 'Finished saving layer dump'
 
+print 'Got', len(vectors), 'vectors in total for clustering'
+
+# TRY PCA, ICA AS WELL!!!
+# if this method works, continue to explore how to make your initial method work as well
+
+if args.load_classification_dump_from is not None:
+    print 'Loading classification dump from', args.load_classification_dump_from
+    f = open(args.load_classification_dump_from)
+    n_clusters, kmeans_obj, predicted = pickle.load(f)
+    args.n_clusters = n_clusters
+    n_clusters = int(n_clusters)
+    print 'Finished loading classification dump'
+else:
     n_clusters = int(args.n_clusters)
     n_restarts = 10
     kmeans_obj = KMeans(init='k-means++', n_clusters=n_clusters, n_init=n_restarts)
     predicted = kmeans_obj.fit_predict(vectors)
 
-    if args.save_dump_to is not None:
-        print 'Saving dump to', args.save_dump_to
-        f = open(args.save_dump_to, 'wb')
-        pickle.dump([args, sample_mask, vectors, vec_origin_file, vec_location, n_clusters, kmeans_obj, predicted], f)
+    if args.save_classification_dump_to is not None:
+        print 'Saving classification dump to', args.save_classification_dump_to
+        f = open(args.save_classification_dump_to, 'wb')
+        pickle.dump([n_clusters, kmeans_obj, predicted], f)
         f.close()
-        print 'Finished saving dump'
+        print 'Finished saving classification dump'
+        
+def do_tsne(data):
+    tsne_model = TSNE(n_components=2, init='pca')
+    trans_tsne = tsne_model.fit_transform(data)
+    return tsne_model, trans_tsne
 
-print 'Got', len(vectors), 'vectors in total for clustering'
+## WARNING: THIS METHOD OF SELECTING MAY NOT BE WORKING AS YOU INTENDED!!!
+def plot_clusters_2d(data, labels, selected_rows):
+    plt.scatter(data[selected_rows, 0], data[selected_rows, 1], c=labels[selected_rows], cmap=plt.get_cmap('Spectral'), lw=0)
+    plt.show()
+
+#plot_clusters_2d(vectors20k_tsne[np.logical_or(predicted20k == 26, predicted20k == 54), :], predicted20k[np.logical_or(predicted20k == 26, predicted20k == 54)])
 
 ##### PCA
 pca = PCA(n_components=80)
@@ -190,6 +237,124 @@ pca = PCA(n_components=80)
 
 
 #########
+
+def get_sparsity(data):
+    # From http://www.cnbc.cmu.edu/~samondjm/papers/VinjeandGallant2000.pdf
+    # ??? BUT THIS ONLY MEASURES NEURON ON STIMULI? NOT REVERSE?
+    numer = 0
+    denom = 0
+    n = len(data) * 1.0
+    for r in data:
+        numer = numer + r / n
+        denom = denom + r**2 / n
+        
+    A = numer**2 / denom
+    S = (1 - A) / (1 - 1/n)
+    return A, S
+
+def get_activations_of_cluster(cluster_i):
+    count = 0
+    bigsum = None
+    for idx in range(0, len(predicted)):
+        if predicted[idx] == cluster_i:
+            if bigsum is None:
+                bigsum = vectors[idx]
+            else:
+                bigsum = bigsum + vectors[idx]
+            count = count + 1.0
+
+    return bigsum, count
+
+def plot_raw_activation(cluster_i):
+    totalsum, count = get_activations_of_cluster(cluster_i)
+    totalsum = totalsum / count
+
+    plt.plot(range(0, len(totalsum)), totalsum, 'b-')
+    plt.title(args.layer + ' Cluster #' + str(cluster_i) + ' (' + str(args.n_clusters) + ' total)')
+    plt.xlabel('Neuron #')
+    plt.ylabel('Average activation')
+
+    A, S = get_sparsity(totalsum)
+    plt.annotate(
+        'Sparsity: S=' + str(S),
+        xy = (0.9, 0.9), xytext = (0.9, 0.9),
+        textcoords = 'axes fraction', ha = 'right', va = 'bottom')
+
+    plt.show()
+
+def plot_activation(cluster_i, top_n=4):
+    bigsum, count = get_activations_of_cluster(cluster_i)
+    bigsum = bigsum / count
+    
+    # Get sorted indexes
+    sorted_indexes = [i[0] for i in sorted(enumerate(bigsum), key=lambda x:x[1], reverse=True)]
+    top_indexes = [sorted_indexes[x] for x in range(top_n)]
+    top_responses = [bigsum[sorted_indexes[x]] for x in range(top_n)]
+
+    bigsum.sort()
+    bigsum = bigsum[::-1]
+    plt.plot(range(len(bigsum)), bigsum, 'bo-')
+    plt.title(args.layer + ' Cluster #' + str(cluster_i) + ' (' + str(args.n_clusters) + ' total)')
+    plt.xlabel('Neuron #')
+    plt.ylabel('Average activation')
+
+    print 'Highest neuron responses:'
+    for i in range(top_n):
+        print 'Neuron #', top_indexes[i], ', mean response: ', top_responses[i]
+
+        plt.annotate(
+            'Neuron #' + str(top_indexes[i]) + '\navg: ' + str(top_responses[i]),
+            xy = (i, bigsum[i]), xytext = (100 + 20 * i, -50 - 20 * i),
+            textcoords = 'offset points', ha = 'right', va = 'bottom',
+            bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
+            arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+    
+    # Print sparsity metric
+    A, S = get_sparsity(bigsum)
+    plt.annotate(
+        'Sparsity: S=' + str(S),
+        xy = (0.9, 0.9), xytext = (0.9, 0.9),
+        textcoords = 'axes fraction', ha = 'right', va = 'bottom')
+    plt.show()
+
+# Plot response of neuron_i on all patches in vectors array
+def plot_stimuli_response(neuron_i, inputs, top_n=16):
+    fig = plt.figure()
+
+    all_vectors = np.array(inputs)
+    responses = all_vectors[:, neuron_i]
+    len_responses = len(responses)
+
+    sorted_indexes = [i[0] for i in sorted(enumerate(responses), key=lambda x:x[1], reverse=True)]
+    responses.sort()
+    responses = responses[::-1]
+    plt.plot(range(len(all_vectors)), responses, 'bo-')
+    plt.title(args.layer + ' Neuron #' + str(neuron_i) + ' Responses to ' + str(len_responses) + ' Stimuli')
+    plt.xlabel('Stimulus #')
+    plt.ylabel('Activation')
+
+    # Include patches with top 8 responses
+    for i in range(top_n):
+        this_vec_location = vec_location[sorted_indexes[i]]
+        rec_field = rf.get_receptive_field(args.layer, this_vec_location[0], this_vec_location[1])
+        load_image(vec_origin_file[sorted_indexes[i]], False)
+        im = net.transformer.deprocess('data',
+            net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)])
+        fig.figimage(im, 100 + i * 50, 20)
+
+    # Find number of stimuli that generate response > 0.5*MAX
+    num_half_height_stimuli = 0
+    for i in range(len_responses):
+        if responses[i] > 0.5 * responses[0]:
+            num_half_height_stimuli = num_half_height_stimuli + 1
+
+    print 'Percentage of responses greater than half height:', num_half_height_stimuli * 1.0 / len_responses
+
+    plt.show()
+
+## Plot image with response of a certain neuron, or highest among all neurons in each hypercolumn
+def dye_image_with_response(path):
+    pass
 
 def get_top_n_in_cluster(cluster_i, n):
     scores = []
@@ -335,3 +500,5 @@ if args.save_plots_to is not None:
         if end >= n_clusters:
             end = n_clusters - 1
         view_n_from_clusters(start, end, 16, True)
+
+print 'All tasks completed. Exiting'
