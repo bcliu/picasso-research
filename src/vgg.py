@@ -31,6 +31,7 @@ if args.save_plots_to is not None:
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+import matplotlib.gridspec as gridspec
 
 import math
 import numpy as np
@@ -238,6 +239,17 @@ pca = PCA(n_components=80)
 
 #########
 
+
+# Given an id, return the patch in the input image that generated vectors[vec_id]
+def get_original_patch_of_vec(vec_id):
+    this_vec_location = vec_location[vec_id]
+    rec_field = rf.get_receptive_field(args.layer, this_vec_location[0], this_vec_location[1])
+    load_image(vec_origin_file[vec_id], False)
+    im = net.transformer.deprocess('data',
+        net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)])
+    return im
+
+
 def get_sparsity(data):
     # From http://www.cnbc.cmu.edu/~samondjm/papers/VinjeandGallant2000.pdf
     # ??? BUT THIS ONLY MEASURES NEURON ON STIMULI? NOT REVERSE?
@@ -282,7 +294,24 @@ def plot_raw_activation(cluster_i):
 
     plt.show()
 
+
+def get_top_n_in_cluster(cluster_i, n):
+    scores = []
+    
+    for vec_id in range(len(vectors)):
+        if predicted[vec_id] == cluster_i:
+            scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
+            
+    scores.sort(key=lambda tup: -tup[1])
+    if n == -1:
+        return scores
+    return scores[0:n]
+
+
 def plot_activation(cluster_i, top_n=4):
+    grid_dims = (8, 9)
+    ax = plt.subplot2grid(grid_dims, (0, 0), colspan=7, rowspan=8)
+    
     bigsum, count = get_activations_of_cluster(cluster_i)
     bigsum = bigsum / count
     
@@ -290,18 +319,18 @@ def plot_activation(cluster_i, top_n=4):
     sorted_indexes = [i[0] for i in sorted(enumerate(bigsum), key=lambda x:x[1], reverse=True)]
     top_indexes = [sorted_indexes[x] for x in range(top_n)]
     top_responses = [bigsum[sorted_indexes[x]] for x in range(top_n)]
-
+    
     bigsum.sort()
     bigsum = bigsum[::-1]
-    plt.plot(range(len(bigsum)), bigsum, 'bo-')
-    plt.title(args.layer + ' Cluster #' + str(cluster_i) + ' (' + str(args.n_clusters) + ' total)')
-    plt.xlabel('Neuron #')
-    plt.ylabel('Average activation')
-
+    ax.plot(range(len(bigsum)), bigsum, 'bo-')
+    ax.set_title(args.layer + ' Cluster #' + str(cluster_i) + ' (' + str(args.n_clusters) + ' total)')
+    ax.set_xlabel('Neuron #')
+    ax.set_ylabel('Average activation')
+    
     print 'Highest neuron responses:'
     for i in range(top_n):
         print 'Neuron #', top_indexes[i], ', mean response: ', top_responses[i]
-
+        
         plt.annotate(
             'Neuron #' + str(top_indexes[i]) + '\navg: ' + str(top_responses[i]),
             xy = (i, bigsum[i]), xytext = (100 + 20 * i, -50 - 20 * i),
@@ -315,57 +344,70 @@ def plot_activation(cluster_i, top_n=4):
         'Sparsity: S=' + str(S),
         xy = (0.9, 0.9), xytext = (0.9, 0.9),
         textcoords = 'axes fraction', ha = 'right', va = 'bottom')
+    
+    # Rightmost column patch plot
+    print 'Looking for vectors closest to the cluster center...'
+    top_vectors = get_top_n_in_cluster(cluster_i, 8)
+    for i, (vec_id, score) in enumerate(top_vectors):
+        ax2 = plt.subplot2grid(grid_dims, (i, 7))
+        if i == 0:
+            ax2.set_title('Patches\nClosest\nto Cluster\nCenter', {'fontsize': 10})
+        plt.axis('off')
+        ax2.imshow(get_original_patch_of_vec(vec_id))
+    
+    # Rightmost column: patches that gen highest response for each neuron
+    all_vectors = np.array(vectors)
+    for i, neuron_i in enumerate(top_indexes):
+        responses = all_vectors[:, neuron_i]
+        max_vec_id = np.argmax(responses)
+        ax3 = plt.subplot2grid(grid_dims, (i, 8))
+        plt.axis('off')
+        ax3.set_title('Neuron #' + str(neuron_i), {'fontsize': 10})
+        ax3.imshow(get_original_patch_of_vec(max_vec_id))
+    
     plt.show()
 
-# Plot response of neuron_i on all patches in vectors array
-def plot_stimuli_response(neuron_i, inputs, top_n=16):
-    fig = plt.figure()
 
+# Plot response of neuron_i on all patches in vectors array
+def plot_stimuli_response(neuron_i, inputs=vectors, top_n=10):
+    grid_dims = (top_n, top_n)
+    ax = plt.subplot2grid(grid_dims, (0, 0), colspan=top_n-1, rowspan=top_n)
+    
     all_vectors = np.array(inputs)
     responses = all_vectors[:, neuron_i]
     len_responses = len(responses)
-
+    
     sorted_indexes = [i[0] for i in sorted(enumerate(responses), key=lambda x:x[1], reverse=True)]
     responses.sort()
     responses = responses[::-1]
-    plt.plot(range(len(all_vectors)), responses, 'bo-')
-    plt.title(args.layer + ' Neuron #' + str(neuron_i) + ' Responses to ' + str(len_responses) + ' Stimuli')
-    plt.xlabel('Stimulus #')
-    plt.ylabel('Activation')
-
-    # Include patches with top 8 responses
+    ax.plot(range(len(all_vectors)), responses, 'bo-')
+    ax.set_title(args.layer + ' Neuron #' + str(neuron_i) + ' Responses to ' + str(len_responses) + ' Stimuli')
+    ax.set_xlabel('Stimulus #')
+    ax.set_ylabel('Activation')
+    
+    # Include patches with top n responses
     for i in range(top_n):
-        this_vec_location = vec_location[sorted_indexes[i]]
-        rec_field = rf.get_receptive_field(args.layer, this_vec_location[0], this_vec_location[1])
-        load_image(vec_origin_file[sorted_indexes[i]], False)
-        im = net.transformer.deprocess('data',
-            net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)])
-        fig.figimage(im, 100 + i * 50, 20)
-
+        ax2 = plt.subplot2grid(grid_dims, (i, top_n - 1))
+        plt.axis('off')
+        if i == 0:
+            ax2.set_title('Top ' + str(top_n) + '\nPatches', {'fontsize': 10})
+        im = get_original_patch_of_vec(sorted_indexes[i])
+        ax2.imshow(im)
+        
     # Find number of stimuli that generate response > 0.5*MAX
     num_half_height_stimuli = 0
     for i in range(len_responses):
         if responses[i] > 0.5 * responses[0]:
             num_half_height_stimuli = num_half_height_stimuli + 1
-
+            
     print 'Percentage of responses greater than half height:', num_half_height_stimuli * 1.0 / len_responses
-
+    
     plt.show()
+
 
 ## Plot image with response of a certain neuron, or highest among all neurons in each hypercolumn
 def dye_image_with_response(path):
     pass
-
-def get_top_n_in_cluster(cluster_i, n):
-    scores = []
-    for vec_id in range(len(vectors)):
-        if predicted[vec_id] == cluster_i:
-            scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
-
-    scores.sort(key=lambda tup: -tup[1])
-    if n == -1:
-        return scores
-    return scores[0:n]
 
 
 ## distance_threshold: require a vector to be smaller than distance of distance_threshold * num of vectors in cluster
@@ -449,9 +491,8 @@ def view_nth_cluster(cluster_i, n):
 
         fig.add_subplot(dim_plot, dim_plot, fig_id)
 
-        rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
-        load_image(vec_origin_file[vec_id], False)
-        plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:(rec_field[3]+1), rec_field[0]:(rec_field[2]+1)]))
+        im = get_original_patch_of_vec(vec_id)
+        plt.imshow(im)
         plt.axis('off')
         fig_id = fig_id + 1
 
@@ -471,10 +512,7 @@ def view_n_from_clusters(from_cluster, to_cluster, n_each, save_plots=False):
         for (vec_id, score) in scores:
             print 'Vector #', vec_id, 'in cluster #', i, ', score:', score
             fig.add_subplot(to_cluster - from_cluster + 1, n_each, fig_id)
-            
-            rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
-            load_image(vec_origin_file[vec_id], False)
-            plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:, rec_field[1]:(rec_field[3]+1), rec_field[0]:(rec_field[2]+1)]))
+            plt.imshow(get_original_patch_of_vec(vec_id))
 
             fig_id = fig_id + 1
 
