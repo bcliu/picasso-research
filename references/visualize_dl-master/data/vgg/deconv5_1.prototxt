@@ -1,0 +1,20 @@
+name: 'deconv5_1'
+
+input: 'data'
+input_dim: 1
+input_dim: 512
+input_dim: 14
+input_dim: 14
+
+layers {
+	type: DECONVOLUTION
+	name: 'deconv'
+	bottom: 'data'
+	top: 'deconv'
+	convolution_param {
+		num_output: 512
+		kernel_size: 3
+		pad: 1
+		stride: 1
+	}
+}

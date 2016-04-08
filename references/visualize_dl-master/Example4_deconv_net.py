@@ -86,7 +86,7 @@ deconv.set_relu_layer('relu1')
 deconv.set_deconv_layer(deconv1,'conv1')
 
 # read image
-im = caffe.io.load_image(research_root + '/images/eyes/1.jpg')
+im = caffe.io.load_image(research_root + '/images/flickr/portraits1500/portrait_105.jpg')
 
 transformer = caffe.io.Transformer({'data':net.blobs['data'].data.shape})
 transformer.set_mean('data',np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1))

@@ -1,0 +1,20 @@
+name: 'deconv2_1'
+
+input: 'data'
+input_dim: 1
+input_dim: 128
+input_dim: 112
+input_dim: 112
+
+layers {
+	type: DECONVOLUTION
+	name: 'deconv'
+	bottom: 'data'
+	top: 'deconv'
+	convolution_param {
+		num_output: 64
+		kernel_size: 3
+		pad: 1
+		stride: 1
+	}
+}

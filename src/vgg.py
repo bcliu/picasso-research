@@ -223,11 +223,17 @@ def do_tsne(data):
     trans_tsne = tsne_model.fit_transform(data)
     return tsne_model, trans_tsne
 
+
 ## WARNING: THIS METHOD OF SELECTING MAY NOT BE WORKING AS YOU INTENDED!!!
 def plot_clusters_2d(data, labels, selected_rows):
     plt.scatter(data[selected_rows, 0], data[selected_rows, 1], c=labels[selected_rows], cmap=plt.get_cmap('Spectral'), lw=0)
     plt.show()
 
+
+# Do MDS on cluster centers, plot on 2D
+def plot_cluster_centers():
+    pass
+    
 #plot_clusters_2d(vectors20k_tsne[np.logical_or(predicted20k == 26, predicted20k == 54), :], predicted20k[np.logical_or(predicted20k == 26, predicted20k == 54)])
 
 ##### PCA
@@ -407,6 +413,7 @@ def plot_stimuli_response(neuron_i, inputs=vectors, top_n=10):
 
 ## Plot image with response of a certain neuron, or highest among all neurons in each hypercolumn
 def dye_image_with_response(path):
+    # Plot a heat map to show which places have highest activation
     pass
 
 
