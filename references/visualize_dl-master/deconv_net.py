@@ -34,6 +34,7 @@ class deconv_net(object):
                 begin_flag = True
 
             if begin_flag:
+                print 'Reconstructing:', key
                 val = self.params[key]
                 # reconstruct from convolutional layer
                 if val[0]=='deconv':
@@ -43,6 +44,7 @@ class deconv_net(object):
                     deconv_net.forward(data=input_data)
                     tmp_out_feat = deconv_net.blobs['deconv'].data
                     recon_feat.append(tmp_out_feat)
+                    print 'Reconstructed shape:', tmp_out_feat.shape
 
                 # reconstruct from max pool layer
                 elif val[0]=='unpool':
@@ -61,8 +63,10 @@ class deconv_net(object):
                                 ix = int(offset[0,nch] % up_shape)
                                 iy = int(offset[0,nch] / up_shape)
                                 poolout[:,nch,iy,ix] = max(poolout[:,nch,iy,ix],last_feat[:,nch,ry,rx])
+                                
 
                     recon_feat.append(poolout)
+                    print 'Reconstructed shape:', poolout.shape
 
                 # reconstruct from relu layer
                 elif val[0]=='relu':
@@ -70,6 +74,7 @@ class deconv_net(object):
                     relu_val = recon_feat[idx-1]
                     relu_val[relu_val<0] = 0
                     recon_feat.append(relu_val)
+                    print 'Reconstructed shape:', relu_val.shape
                 else:
                     print 'wrong type of layer:{}'.format(key)
 

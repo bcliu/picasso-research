@@ -24,6 +24,8 @@ parser.add_argument('--save_classification_dump_to', default=None, required=Fals
 
 parser.add_argument('--save_plots_to', default=None, required=False)
 
+parser.add_argument('--append_kmeans_scores', action='store_true')
+
 args = parser.parse_args()
 
 if args.save_plots_to is not None:
@@ -32,6 +34,7 @@ if args.save_plots_to is not None:
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import matplotlib.gridspec as gridspec
+from matplotlib.offsetbox import TextArea, DrawingArea, OffsetImage, AnnotationBbox
 
 import math
 import numpy as np
@@ -41,8 +44,12 @@ from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.datasets import load_digits
 from sklearn.decomposition import PCA
+from sklearn.decomposition import FastICA
 from sklearn.preprocessing import scale
 from sklearn.manifold import TSNE
+import sklearn.datasets
+
+import skimage
 
 import get_receptive_field as rf
 
@@ -101,11 +108,10 @@ net.blobs['data'].reshape(1, 3, 224, 224)
 
 def load_image(path, echo=True):
     net.predict([caffe.io.load_image(path)], oversample=False)
-    #if echo:
-    #    print("Predicted class is #{}.".format(out['prob'][0].argmax()))
-
-    #    top_k = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
-    #    print labels[top_k]
+    if echo:
+        print("Predicted class is #{}.".format(net.blobs['prob'].data[0].argmax()))
+        top_k = net.blobs['prob'].data[0].flatten().argsort()[-1:-6:-1]
+        print labels[top_k]
 
 
 ## NOTE: Resize every image to 224x224, or resize but keep original ratio? Does it affect things?
@@ -201,7 +207,13 @@ print 'Got', len(vectors), 'vectors in total for clustering'
 if args.load_classification_dump_from is not None:
     print 'Loading classification dump from', args.load_classification_dump_from
     f = open(args.load_classification_dump_from)
-    n_clusters, kmeans_obj, predicted = pickle.load(f)
+    dumped = pickle.load(f)
+    f.close()
+    kmeans_scores = []
+    if len(dumped) == 3:
+        n_clusters, kmeans_obj, predicted = dumped
+    elif len(dumped) == 4:
+        n_clusters, kmeans_obj, predicted, kmeans_scores = dumped
     args.n_clusters = n_clusters
     n_clusters = int(n_clusters)
     print 'Finished loading classification dump'
@@ -210,11 +222,16 @@ else:
     n_restarts = 10
     kmeans_obj = KMeans(init='k-means++', n_clusters=n_clusters, n_init=n_restarts)
     predicted = kmeans_obj.fit_predict(vectors)
+    
+    # Precompute distances of every vector to its cluster center
+    kmeans_scores = []
+    for vec_i in range(len(vectors)):
+        kmeans_scores.append(kmeans_obj.score(vectors[vec_i].reshape(1, -1)))
 
     if args.save_classification_dump_to is not None:
         print 'Saving classification dump to', args.save_classification_dump_to
         f = open(args.save_classification_dump_to, 'wb')
-        pickle.dump([n_clusters, kmeans_obj, predicted], f)
+        pickle.dump([n_clusters, kmeans_obj, predicted, kmeans_scores], f)
         f.close()
         print 'Finished saving classification dump'
         
@@ -229,10 +246,6 @@ def plot_clusters_2d(data, labels, selected_rows):
     plt.scatter(data[selected_rows, 0], data[selected_rows, 1], c=labels[selected_rows], cmap=plt.get_cmap('Spectral'), lw=0)
     plt.show()
 
-
-# Do MDS on cluster centers, plot on 2D
-def plot_cluster_centers():
-    pass
     
 #plot_clusters_2d(vectors20k_tsne[np.logical_or(predicted20k == 26, predicted20k == 54), :], predicted20k[np.logical_or(predicted20k == 26, predicted20k == 54)])
 
@@ -273,7 +286,7 @@ def get_sparsity(data):
 def get_activations_of_cluster(cluster_i):
     count = 0
     bigsum = None
-    for idx in range(0, len(predicted)):
+    for idx in range(len(predicted)):
         if predicted[idx] == cluster_i:
             if bigsum is None:
                 bigsum = vectors[idx]
@@ -312,6 +325,47 @@ def get_top_n_in_cluster(cluster_i, n):
     if n == -1:
         return scores
     return scores[0:n]
+    
+
+def get_top_in_clusters(clusters_i):
+    scores = {}
+    
+    for i in clusters_i:
+        scores[i] = []
+    
+    if len(kmeans_scores) == 0:
+        print 'Precomputed kmeans scores do not exist'
+        for vec_i in range(len(vectors)):
+            if predicted[vec_i] in clusters_i:
+                scores[predicted[vec_i]].append((vec_i, kmeans_obj.score(vectors[vec_i].reshape(1, -1))))
+    else:
+        for vec_i in range(len(vectors)):
+            if predicted[vec_i] in clusters_i:
+                scores[predicted[vec_i]].append((vec_i, kmeans_scores[vec_i]))
+    
+    out = []
+    for i in clusters_i:
+        scores[i].sort(key=lambda tup: -tup[1])
+        out.append(scores[i][0][0])
+    return out
+
+
+# Do MDS on cluster centers, plot on 2D
+def plot_clusters_embedding():
+    ax = plt.gca()
+    _, centers_2d = do_tsne(kmeans_obj.cluster_centers_)
+    plt.scatter(centers_2d[:, 0], centers_2d[:, 1])
+    clusters_top = get_top_in_clusters(range(args.n_clusters))
+    
+    for cluster_i in range(args.n_clusters):
+        top_vector = clusters_top[cluster_i]
+        im = get_original_patch_of_vec(top_vector)
+        imagebox = OffsetImage(im, zoom=0.5)
+        ab = AnnotationBbox(imagebox, (0., 0.), xybox=(centers_2d[cluster_i, 0], centers_2d[cluster_i, 1]),
+                            pad=0, frameon=False, xycoords='data', boxcoords="data")
+        ax.add_artist(ab)
+    
+    plt.show()
 
 
 def plot_activation(cluster_i, top_n=4):
@@ -406,14 +460,93 @@ def plot_stimuli_response(neuron_i, inputs=vectors, top_n=10):
         if responses[i] > 0.5 * responses[0]:
             num_half_height_stimuli = num_half_height_stimuli + 1
             
-    print 'Percentage of responses greater than half height:', num_half_height_stimuli * 1.0 / len_responses
+    print '# responses greater than half height:', num_half_height_stimuli, '(', num_half_height_stimuli * 1.0 / len_responses, ')'
+    print 'Half height:', 0.5 * responses[0]
     
     plt.show()
+
+
+def do_pca_on_neuron(neuron_i, do_ica=False):
+    patches = []
+    half_height = np.array(vectors)[:, neuron_i].max() * 0.5
+    middle_neuron_i = math.floor(len(net.blobs[args.layer].data[0][0]) / 2) + 1
+    rec_field = rf.get_receptive_field(args.layer, middle_neuron_i, middle_neuron_i)
+    patch_dim = int(rec_field[2] - rec_field[0] + 1)
+    print 'Patch dimension is', patch_dim
+    print 'Receptive field of neuron in the center hypercolumn is', rec_field
+    
+    for i in range(len(predicted)):
+        if vectors[i][neuron_i] > half_height:
+            im = get_original_patch_of_vec(i)
+            if (len(im) == patch_dim) and (len(im[0]) == patch_dim):
+                patches.append(skimage.color.rgb2gray(im)) # WARNING: TURNED INTO GRAYSCALE!!
+                # ... but should try to do PCA on 30000 dimensions and see what you will get too
+    
+    print 'Found', len(patches), 'patches with activations greater than half height'
+    patches = np.array(patches)
+    mean_patch = patches.mean(0)
+    
+    # Subtract the mean from all data
+    flattened = []
+    for i in range(len(patches)):
+        patches[i] -= mean_patch
+        flattened.append(patches[i].flatten())
+    
+    patches_pca = FastICA(n_components=100)
+    patches_trans = patches_pca.fit_transform(flattened)
+    #print sum(patches_pca.explained_variance_ratio_)
+    
+    for start_id in range(0, 99, 25):
+        fig = plt.figure()
+        dim_plot = 5
+        for fig_id in range(dim_plot * dim_plot):
+            print 'Creating figure', fig_id
+            fig.add_subplot(dim_plot, dim_plot, fig_id + 1)
+            plt.imshow(patches_pca.components_[fig_id + start_id].reshape(100, 100))
+            plt.axis('off')
+        plt.show()
+    
+    # Treat the coefficients as Gaussians and sample from them
+    synthesized = np.empty(10000)
+    for i in range(100):
+        sampled = sklearn.datasets.make_gaussian_quantiles([patches_trans[:, i].mean()], patches_trans[:, i].var(), n_samples=1, n_classes=1, n_features=1)[0][0][0]
+        synthesized += sampled * patches_pca.components_[i]
+        
+    tmp = synthesized.reshape(100, 100) + mean_patch
+    plt.imshow(tmp)
+    plt.show()
+    
+    return mean_patch, flattened, patches_pca, patches_trans
 
 
 ## Plot image with response of a certain neuron, or highest among all neurons in each hypercolumn
 def dye_image_with_response(path):
     # Plot a heat map to show which places have highest activation
+    heatmap = np.empty([224, 224])
+    load_image(path)
+    layer_response = net.blobs[args.layer].data[0]
+    
+    # Find the highest response in each hypercolumn
+    dim = len(layer_response[0])
+    for x in range(dim):
+        for y in range(dim):
+            max_response = np.max(layer_response[:, y, x])
+            rec_field = rf.get_receptive_field(args.layer, x, y)
+            
+            # Update the heatmap with largest activation values
+            for heatmap_x in range(rec_field[0], rec_field[2] + 1):
+                for heatmap_y in range(rec_field[1], rec_field[3] + 1):
+                    if heatmap[heatmap_y, heatmap_x] < max_response:
+                        heatmap[heatmap_y, heatmap_x] = max_response
+                        
+    ax = plt.gca()
+    im = net.transformer.deprocess('data', net.blobs['data'].data[0])
+    ax.imshow(im)
+    ax.imshow(heatmap, cmap=plt.cm.Blues, alpha=0.7)
+    plt.show()
+
+
+def dye_image_with_neuron_response(path, neuron_i):
     pass
 
 
@@ -453,7 +586,6 @@ def find_patches_in_cluster(cluster_i, image_path, dist_thres_percentage=1.0):
                         rec_field[2] - rec_field[0] + 1,
                         rec_field[3] - rec_field[1] + 1,
                         fill=False, edgecolor="red"))
-                    #plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)]))
 
     print 'Found', total_patches_found, 'patches in total,', patches_ignored, 'ignored due to distance'
     plt.show()
@@ -463,20 +595,7 @@ def view_nth_in_cluster(cluster_i, i):
     for vec_id in range(len(vectors)):
         if predicted[vec_id] == cluster_i:
             if num_in_cluster_seen == i:
-                print 'Showing the ' + str(vec_id) + 'th element in vectors array, at ', vec_location[vec_id]
-                rec_field = rf.get_receptive_field(args.layer, vec_location[vec_id][0], vec_location[vec_id][1])
-                print 'Receptive field: ', rec_field
-                
-                # CHECK IF YOU GET X AND Y RIGHT
-                print 'From file:', vec_origin_file[vec_id]
-                load_image(vec_origin_file[vec_id], False)
-
-                #fig = plt.figure()
-                #fig.add_subplot(1, 2, 1)
-                plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)]))
-                #fig.add_subplot(1, 2, 2)
-                #plt.imshow(transformer.deprocess('data', net.blobs['data'].data[0][:,20:60, 40:60]))
-                #plt.axis('off')
+                plt.imshow(get_original_patch_of_vec(vec_id))
                 plt.show()
                 return
             else:
@@ -546,4 +665,13 @@ if args.save_plots_to is not None:
             end = n_clusters - 1
         view_n_from_clusters(start, end, 16, True)
 
+if args.append_kmeans_scores:
+    kmeans_scores = []
+    for vec_i in range(len(vectors)):
+        kmeans_scores.append(kmeans_obj.score(vectors[vec_i].reshape(1, -1)))
+
+    print 'Saving classification and kmeans scores dump to', args.save_classification_dump_to
+    f = open(args.save_classification_dump_to, 'wb')
+    pickle.dump([n_clusters, kmeans_obj, predicted, kmeans_scores], f)
+    f.close()
 print 'All tasks completed. Exiting'

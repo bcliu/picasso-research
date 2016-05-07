@@ -14,7 +14,7 @@ from deconv_net import deconv_net
 input_im = sys.argv[1]
 
 # load net model
-caffe.set_mode_cpu()
+caffe.set_mode_gpu()
 net = caffe.Net('./data/vgg16_mod.prototxt', caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel', caffe.TEST)
 
 # show net details
@@ -163,25 +163,30 @@ input_img = input_img.reshape([1] + [input_img.shape[i] for i in range(3)])
 out = net.forward(data=input_img)
 
 # set switch of pool
-deconv.set_unpool_layer(net.blobs['pool5_mask'].data,2,3,'pool5')
-deconv.set_unpool_layer(net.blobs['pool4_mask'].data,2,3,'pool4')
-deconv.set_unpool_layer(net.blobs['pool3_mask'].data,2,3,'pool3')
-deconv.set_unpool_layer(net.blobs['pool2_mask'].data,2,3,'pool2')
-deconv.set_unpool_layer(net.blobs['pool1_mask'].data,2,3,'pool1')
+deconv.set_unpool_layer(net.blobs['pool5_mask'].data,2,2,'pool5')
+deconv.set_unpool_layer(net.blobs['pool4_mask'].data,2,2,'pool4')
+deconv.set_unpool_layer(net.blobs['pool3_mask'].data,2,2,'pool3')
+deconv.set_unpool_layer(net.blobs['pool2_mask'].data,2,2,'pool2')
+deconv.set_unpool_layer(net.blobs['pool1_mask'].data,2,2,'pool1')
 
 # find top activation and reconstruction
-top_act = np.zeros(net.blobs['conv4_2'].data.shape)
-layer_feat_map = net.blobs['conv4_2'].data
+layer = 'conv5_3'
+begin_with = 'relu5_3'
+top_act = np.zeros(net.blobs[layer].data.shape)
+layer_feat_map = net.blobs[layer].data
 
 top_act[layer_feat_map==layer_feat_map.max()] = layer_feat_map.max()
-recon_feat = deconv.recon_down(top_act,'relu4_1')
+# SO ONLY ACTIVATING ONE NEURON IN ONE HYPERCOLUMN??? WHY THAT MAKES SENSE??
+# what happens if you activate all? everything? maybe one in every hypercolumn, or everyone in one hypercolumn?
+# and what if you activate same neuron across all hypercolumns..?
+recon_feat = deconv.recon_down(top_act, begin_with)
 
 # show reconstruction image
 image = recon_feat[-1][0]
 image -= image.min()
 image /= image.max()
 image = image.transpose([1,2,0])
-re_image_name = 'result.png'
+re_image_name = 'vgg_deconv_out.png'
 imsave(re_image_name,image)
 
 plt.figure(1)

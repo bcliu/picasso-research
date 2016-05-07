@@ -12,8 +12,10 @@ from visualize_cls_salience import visualize
 from deconv_net import deconv_net
 
 # load net model
-caffe.set_mode_cpu()
+caffe.set_mode_gpu()
 net = caffe.Net('./data/deploy3.prototxt',caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel',caffe.TEST)
+
+input_im = sys.argv[1]
 
 # show net details
 print '\n blobs of caffe  model:'
@@ -86,7 +88,7 @@ deconv.set_relu_layer('relu1')
 deconv.set_deconv_layer(deconv1,'conv1')
 
 # read image
-im = caffe.io.load_image(research_root + '/images/flickr/portraits1500/portrait_105.jpg')
+im = caffe.io.load_image(input_im)
 
 transformer = caffe.io.Transformer({'data':net.blobs['data'].data.shape})
 transformer.set_mean('data',np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1))
@@ -118,7 +120,7 @@ image = recon_feat[-1][0]
 image -= image.min()
 image /= image.max()
 image = image.transpose([1,2,0])
-re_image_name = 'result.png'
+re_image_name = 'alexnet_deconv_out.png'
 imsave(re_image_name,image)
 
 plt.figure(1)

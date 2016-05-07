@@ -7,3 +7,4 @@ references/visualize_dl-master/constants.py
 *.so
 *.pyc
 *.dump
+*.png
