@@ -8,3 +8,5 @@ references/visualize_dl-master/constants.py
 *.pyc
 *.dump
 *.png
+*.jpg
+*.out
