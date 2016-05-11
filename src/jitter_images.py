@@ -10,7 +10,8 @@
 # TODO: another concern: maybe better to adjust ratio to make it square
 # TODO: TRY FILL MOVED REGION WITH DOMINANT COLOR OR GRADIENT? OR JUST GAUSSIAN SMOOTH IT?
 # TODO: Ignore group if few patches are in it. meaning outlier
-
+# TODO: Should try to load multiple scales models at the same time, find which one is the most proper
+# TODO: scaling
 from constants import *
 import argparse
 from os import walk
@@ -36,6 +37,7 @@ parser.add_argument('-ld', '--layer_dump', required=True)
 parser.add_argument('-cd', '--clusters_dump', required=True)
 parser.add_argument('-c', '--clusters', nargs='+', required=True)
 parser.add_argument('-r', '--radius', required=True, help='Jitter radius')
+parser.add_argument('-ct', '--cluster_threshold', required=False, default=0.6, help='Cluster distance threshold (0-1)')
 parser.add_argument('--interactive', action='store_true', default=False, required=False,
     help='Show which parts are jittered in a screen instead of saving')
 args = parser.parse_args()
@@ -79,11 +81,7 @@ if len(kmeans_scores) == 0:
         sys.stdout.write("\rFinished: %f%%" % (vec_i * 100.0 / n_vectors))
         sys.stdout.flush()
     print '\nDone.'
-    
-# Important variables:
-# 0. vectors: all image patches
-# 1. predicted: cluster of each vector
-# 2. kmeans_scores: distance of each vector to cluster center
+
 
 def load_image(path):
     net.predict([caffe.io.load_image(path)], oversample=False)
@@ -104,14 +102,12 @@ class UnionFind:
         if i_root == j_root:
             return
         self.group_arr[j] = i_root
-        
-    
+
     def find_root(self, i):
         if self.group_arr[i] == i:
             return i
         return self.find_root(self.group_arr[i])
-    
-    
+
     def merge_all(self):
         for i in range(len(self.obj_arr)):
             for j in range(i + 1, len(self.obj_arr)):
@@ -130,22 +126,16 @@ def are_squares_overlap(tup1, tup2):
     overlap_threshold = 0.25
     
     # Can't be any overlap at all
-    left = None
-    right = None
-    top = None
-    bottom = None
+    left = tup2
+    right = tup1
+    top = tup2
+    bottom = tup1
     if tup1[0] < tup2[0]:
         left = tup1
         right = tup2
-    else:
-        left = tup2
-        right = tup1
     if tup1[1] < tup2[1]:
         top = tup1
         bottom = tup2
-    else:
-        top = tup2
-        bottom = tup1
     if left[2] < right[0] or top[3] < bottom[1]:
         return 1
         
@@ -169,8 +159,6 @@ def merge_squares(squares):
     uf = UnionFind(squares, are_squares_overlap)
     uf.merge_all()
     
-    #print 'Grouping results:', uf.group_arr
-    
     merged_squares = {}
     
     # Taking the simple approach: just generate a rectangle that contains all those squares
@@ -187,7 +175,24 @@ def merge_squares(squares):
         merged_squares[group][3] = max(merged_squares[group][3], square[3])
     
     return merged_squares.values()
-    
+
+
+# Merge squares through nonmaximal suppression: finding all local maxima, use squares surrounding those as
+# merged squares. Once one square is used, don't use it again
+def merge_squares_2(squares, im):
+    im_height = len(im)
+    im_width = len(im[0])
+    counter = np.zeros((im_height, im_width))
+    # For every square, increment counters in the corresponding region
+    for square in squares:
+        x1, y1, x2, y2 = square
+        counter[y1:(y2+1), x1:(x2+1)] += np.ones((y2-y1+1, x2-x1+1))
+
+    ax = plt.gca()
+    ax.imshow(im)
+    ax.imshow(counter, alpha=0.7)
+    plt.show()
+
 
 def jitter_regions(im, regions, radius):
     gradient_percentage = 0.5
@@ -254,7 +259,7 @@ for (dirpath, dirnames, filenames) in walk(args.input_dir):
         # Maps cluster ID to kmeans score threshold. Patches with activation larger than threshold
         # (meaning distance too large) will not be considered
         thresholds = {}
-        thres_percentage = 0.8
+        thres_percentage = float(args.cluster_threshold)
         for c in clusters:
             cluster_scores = [kmeans_scores[i] for i in range(n_vectors) if predicted[i] == c]
             cluster_scores.sort(reverse=True)
@@ -264,27 +269,33 @@ for (dirpath, dirnames, filenames) in walk(args.input_dir):
         
         for y in range(dim_feature_map):
             for x in range(dim_feature_map):
-                hypercolumn = net.blobs[layer].data[0][:,y,x].copy().reshape(1, -1)
+                hypercolumn = net.blobs[layer].data[0][:, y, x].copy().reshape(1, -1)
                 prediction = kmeans_obj.predict(hypercolumn)
                 if prediction in clusters:
                     rec_field = rf.get_receptive_field(layer, x, y)
+
+                    # HACK: if the borders touch any boundary of the image, don't use it
+                    if rec_field[0] == 0 or rec_field[1] == 0 or rec_field[2] == len(im[0]) - 1 or rec_field[3] == len(im) - 1:
+                        continue
                     axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
                         rec_field[2] - rec_field[0] + 1,
                         rec_field[3] - rec_field[1] + 1,
                         fill=False, edgecolor="red"))
                     detected_squares.append(rec_field)
-                    
+
+        merge_squares_2(detected_squares, im)
         merged_regions = merge_squares(detected_squares)
         for region in merged_regions:
             axis.add_patch(Rectangle((region[0], region[1]),
                 region[2] - region[0] + 1,
                 region[3] - region[1] + 1,
                 fill=False, edgecolor="blue"))
-        
-        #plt.show()
-        if not args.interactive:
+
+        if args.interactive:
+            plt.show()
+        else:
             plt.savefig(os.path.join(args.output_dir, name_only + '_detected' + ext))
-        
+
         plt.clf()
         
         jittered = jitter_regions(im, merged_regions, int(args.radius))
