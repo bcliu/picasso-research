@@ -124,7 +124,7 @@ class UnionFind:
 
 # Returns 0 if the squares have significant overlaps, 1 otherwise
 def are_squares_overlap(tup1, tup2):
-    overlap_threshold = 0.25
+    overlap_threshold = 0.6
 
     # Can't be any overlap at all
     left = tup2
@@ -256,7 +256,7 @@ def merge_squares_2(squares, im):
 
             merged_box = list(box)
             # With these coordinates, find boxes that fully contain this region
-            for square in list(squares): # Iterate in the copy of squares
+            for square in list(squares):  # Iterate in the copy of squares
                 if square[0] <= box[0] and square[1] <= box[1] and square[2] >= box[2] and square[3] >= box[3]:
                     merged_box[0] = min(merged_box[0], square[0])
                     merged_box[1] = min(merged_box[1], square[1])
@@ -354,34 +354,35 @@ def jitter_images():
                         # HACK: if the borders touch any boundary of the image, don't use it
                         if rec_field[0] == 0 or rec_field[1] == 0 or rec_field[2] == len(im[0]) - 1 or rec_field[3] == len(im) - 1:
                             continue
-                        axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
-                            rec_field[2] - rec_field[0] + 1,
-                            rec_field[3] - rec_field[1] + 1,
-                            fill=False, edgecolor="red"))
+                        # axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
+                        #     rec_field[2] - rec_field[0] + 1,
+                        #     rec_field[3] - rec_field[1] + 1,
+                        #     fill=False, edgecolor="red"))
                         if prediction not in detected_squares:
                             detected_squares[prediction] = []
                         detected_squares[prediction].append(rec_field)
 
+            all_squares = []
             for k in detected_squares.keys():
-                merged = merge_squares_2(detected_squares[k], im)
-                for region in merged:
-                    axis.add_patch(Rectangle((region[0], region[1]),
-                        region[2] - region[0] + 1,
-                        region[3] - region[1] + 1,
-                        fill=False, edgecolor="blue"))
+                all_squares += detected_squares[k]
+            merged_regions = merge_squares(all_squares)
+            for region in merged_regions:
+                axis.add_patch(Rectangle((region[0], region[1]),
+                    region[2] - region[0] + 1,
+                    region[3] - region[1] + 1,
+                    fill=False, edgecolor="blue"))
 
             if args.interactive:
                 plt.show()
             else:
                 plt.savefig(os.path.join(args.output_dir, name_only + '_detected' + ext))
             plt.clf()
-            continue
 
             jittered = jitter_regions(im, merged_regions, int(args.radius))
             plt.imshow(jittered)
             if args.interactive:
                 plt.show()
             else:
-                plt.savefig(os.path.join(args.output_dir, name_only + '_jit' + ext))
+                plt.savefig(os.path.join(args.output_dir, name_only + '_jittered' + ext))
 
 jitter_images()
