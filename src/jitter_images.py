@@ -371,14 +371,12 @@ def jitter_images():
                         region[3] - region[1] + 1,
                         fill=False, edgecolor="blue"))
 
-            continue
-
             if args.interactive:
                 plt.show()
             else:
                 plt.savefig(os.path.join(args.output_dir, name_only + '_detected' + ext))
-
             plt.clf()
+            continue
 
             jittered = jitter_regions(im, merged_regions, int(args.radius))
             plt.imshow(jittered)
