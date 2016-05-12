@@ -10,7 +10,8 @@
 # TODO: another concern: maybe better to adjust ratio to make it square
 # TODO: TRY FILL MOVED REGION WITH DOMINANT COLOR OR GRADIENT? OR JUST GAUSSIAN SMOOTH IT?
 # TODO: Ignore group if few patches are in it. meaning outlier
-
+# TODO: Should try to load multiple scales models at the same time, find which one is the most proper
+# TODO: scaling
 from constants import *
 import argparse
 from os import walk
@@ -18,6 +19,7 @@ import os, sys, math, pickle, matplotlib
 import numpy as np
 import get_receptive_field as rf
 import random
+from Queue import Queue
 
 # Set Caffe output level to Warnings
 os.environ['GLOG_minloglevel'] = '2'
@@ -36,6 +38,7 @@ parser.add_argument('-ld', '--layer_dump', required=True)
 parser.add_argument('-cd', '--clusters_dump', required=True)
 parser.add_argument('-c', '--clusters', nargs='+', required=True)
 parser.add_argument('-r', '--radius', required=True, help='Jitter radius')
+parser.add_argument('-ct', '--cluster_threshold', required=False, default=0.6, help='Cluster distance threshold (0-1)')
 parser.add_argument('--interactive', action='store_true', default=False, required=False,
     help='Show which parts are jittered in a screen instead of saving')
 args = parser.parse_args()
@@ -79,45 +82,39 @@ if len(kmeans_scores) == 0:
         sys.stdout.write("\rFinished: %f%%" % (vec_i * 100.0 / n_vectors))
         sys.stdout.flush()
     print '\nDone.'
-    
-# Important variables:
-# 0. vectors: all image patches
-# 1. predicted: cluster of each vector
-# 2. kmeans_scores: distance of each vector to cluster center
+
 
 def load_image(path):
     net.predict([caffe.io.load_image(path)], oversample=False)
-    
+
 
 class UnionFind:
-    
+
     obj_arr = []
     group_arr = []
     # A passed-in function which decides if two objects should be merged
     # Returns 0 if yes, 1 otherwise
     compare_fun = None
-    
+
     def union(self, i, j):
         i_root = self.find_root(i)
         j_root = self.find_root(j)
-        
+
         if i_root == j_root:
             return
         self.group_arr[j] = i_root
-        
-    
+
     def find_root(self, i):
         if self.group_arr[i] == i:
             return i
         return self.find_root(self.group_arr[i])
-    
-    
+
     def merge_all(self):
         for i in range(len(self.obj_arr)):
             for j in range(i + 1, len(self.obj_arr)):
                 if self.compare_fun(self.obj_arr[i], self.obj_arr[j]) == 0:
                     self.union(i, j)
-    
+
     def __init__(self, data_arr, compare_fun):
         self.obj_arr = data_arr
         # Initialize group IDs
@@ -128,66 +125,150 @@ class UnionFind:
 # Returns 0 if the squares have significant overlaps, 1 otherwise
 def are_squares_overlap(tup1, tup2):
     overlap_threshold = 0.25
-    
+
     # Can't be any overlap at all
-    left = None
-    right = None
-    top = None
-    bottom = None
+    left = tup2
+    right = tup1
+    top = tup2
+    bottom = tup1
     if tup1[0] < tup2[0]:
         left = tup1
         right = tup2
-    else:
-        left = tup2
-        right = tup1
     if tup1[1] < tup2[1]:
         top = tup1
         bottom = tup2
-    else:
-        top = tup2
-        bottom = tup1
     if left[2] < right[0] or top[3] < bottom[1]:
         return 1
-        
+
     p1_x = max(tup1[0], tup2[0])
     p1_y = max(tup1[1], tup2[1])
     p2_x = min(tup1[2], tup2[2])
     p2_y = min(tup1[3], tup2[3])
-    
+
     area_overlap = (p2_x - p1_x) * (p2_y - p1_y) * 1.0
     area1 = (tup1[2] - tup1[0]) * (tup1[3] - tup1[1]) * 1.0
     area2 = (tup2[2] - tup2[0]) * (tup2[3] - tup2[1]) * 1.0
-    
+
     if area_overlap / area1 > overlap_threshold or area_overlap / area2 > overlap_threshold:
         return 0
     return 1
-    
-    
+
+
 # Given an array of squares (four-tuples, of coordinates of topleft and bottomright pixels),
 # Merge those with large overlapping areas into larger shapes
 def merge_squares(squares):
     uf = UnionFind(squares, are_squares_overlap)
     uf.merge_all()
-    
-    #print 'Grouping results:', uf.group_arr
-    
+
     merged_squares = {}
-    
+
     # Taking the simple approach: just generate a rectangle that contains all those squares
     for i in range(len(squares)):
         square = squares[i]
         group = uf.group_arr[i]
-        
+
         if group not in merged_squares:
             merged_squares[group] = [float('inf'), float('inf'), -1, -1]
-        
+
         merged_squares[group][0] = min(merged_squares[group][0], square[0])
         merged_squares[group][1] = min(merged_squares[group][1], square[1])
         merged_squares[group][2] = max(merged_squares[group][2], square[2])
         merged_squares[group][3] = max(merged_squares[group][3], square[3])
-    
+
     return merged_squares.values()
-    
+
+
+# Merge squares through nonmaximal suppression: finding all local maxima, use squares surrounding those as
+# merged squares. Once one square is used, don't use it again
+def merge_squares_2(squares, im):
+    im_height = len(im)
+    im_width = len(im[0])
+    counter = np.zeros((im_height, im_width))
+    # For every square, increment counters in the corresponding region
+    for square in squares:
+        x1, y1, x2, y2 = square
+        counter[y1:(y2+1), x1:(x2+1)] += np.ones((y2-y1+1, x2-x1+1))
+
+    is_in_bound = lambda x, y: not (x < 0 or y < 0 or x >= im_width or y >= im_height)
+
+    # NOTE: Implementing the simple approach: find all local maxima in image, across all clusters
+    # may not perform as well as separately consider each cluster -- but worry about that later
+    # First, find all spots that _could_ be the local maxima plateau
+    could_be = np.zeros((im_height, im_width))
+    for y in range(im_height):
+        for x in range(im_width):
+            cur = counter[y, x]
+            if (y == 0 or counter[y-1, x] <= cur) and (y == im_height - 1 or counter[y+1, x] <= cur) and \
+               (x == 0 or counter[y, x-1] <= cur) and (x == im_width - 1 or counter[y, x+1] <= cur):
+                #if y != 0 and x != 0 and y < im_height and x < im_width:
+                #    print could_be[(y-1):(y+2), (x-1):(x+2)]
+                could_be[y, x] = 1
+
+    # "Corrupt" those "could-be"'s from those "cannot-be"'s
+    frontiers = Queue()
+    # Put all 0 in frontiers
+    for y in range(im_height):
+        for x in range(im_width):
+            if could_be[y, x] == 0:
+                frontiers.put((x, y))
+    while not frontiers.empty():
+        x, y = frontiers.get(False)
+        for delta_x in range(-1, 2):
+            for delta_y in range(-1, 2):
+                if abs(delta_x + delta_y) != 1:
+                    continue
+                new_x = x + delta_x
+                new_y = y + delta_y
+                # Check boundaries
+                if not is_in_bound(new_x, new_y) or could_be[new_y, new_x] == 0:
+                    continue
+                if counter[y, x] == counter[new_y, new_x]:
+                    could_be[new_y, new_x] = 0
+                    frontiers.put((new_x, new_y))
+
+    # All cells with 1 in could_be are local maxima. Use these to find regions to merge
+    # Find all contiguous regions. In each region, find the topleft corner and bottom right corner
+    merged_boxes = []
+    for y in range(im_height):
+        for x in range(im_width):
+            if could_be[y, x] == 0:
+                continue
+            frontiers = Queue()
+            frontiers.put((x, y))
+            box = [im_width, im_height, -1, -1]
+
+            while not frontiers.empty():
+                r_x, r_y = frontiers.get(False)
+                could_be[r_y, r_x] = 0
+                for delta_x in range(-1, 2):
+                    for delta_y in range(-1, 2):
+                        if abs(delta_x + delta_y) != 1:
+                            continue
+                        neighb_x = r_x + delta_x
+                        neighb_y = r_y + delta_y
+                        if not is_in_bound(neighb_x, neighb_y) or could_be[neighb_y, neighb_x] == 0:
+                            continue
+                        could_be[neighb_y, neighb_x] = 0
+                        frontiers.put((neighb_x, neighb_y))
+                        box[0] = min(box[0], neighb_x)
+                        box[1] = min(box[1], neighb_y)
+                        box[2] = max(box[2], neighb_x)
+                        box[3] = max(box[3], neighb_y)
+
+            merged_box = list(box)
+            # With these coordinates, find boxes that fully contain this region
+            for square in list(squares): # Iterate in the copy of squares
+                if square[0] <= box[0] and square[1] <= box[1] and square[2] >= box[2] and square[3] >= box[3]:
+                    merged_box[0] = min(merged_box[0], square[0])
+                    merged_box[1] = min(merged_box[1], square[1])
+                    merged_box[2] = max(merged_box[2], square[2])
+                    merged_box[3] = max(merged_box[3], square[3])
+                    squares.remove(square)
+
+            # TODO Maybe take the halfway between box and merged box is better?
+            merged_boxes.append(merged_box)
+
+    return merged_boxes
 
 def jitter_regions(im, regions, radius):
     gradient_percentage = 0.5
@@ -196,10 +277,10 @@ def jitter_regions(im, regions, radius):
         patch = im[region[1]:(region[3]+1), region[0]:(region[2]+1), :]
         region_height = int(region[3] - region[1])
         region_width = int(region[2] - region[0])
-        
+
         jitter_y = int(random.randrange(-radius, radius))
         jitter_x = int(math.floor(math.sqrt(radius ** 2 - jitter_y ** 2) * np.random.choice([-1, 1])))
-        
+
         new_y1 = region[1] + jitter_y
         # Check boundaries
         if new_y1 < 0:
@@ -207,19 +288,19 @@ def jitter_regions(im, regions, radius):
         if region_height + new_y1 >= len(im):
             new_y1 = len(im) - region_height - 1
         new_y2 = region_height + new_y1
-        
+
         new_x1 = region[0] + jitter_x
         if new_x1 < 0:
             new_x1 = 0
         if region_width + new_x1 >= len(im[0]):
             new_x1 = len(im[0]) - region_width - 1
         new_x2 = region_width + new_x1
-        
+
         assert(new_x1 >= 0 and new_x2 >= 0 and new_y1 >= 0 and new_y2 >= 0)
         assert(new_x1 < len(im[0]) and new_x2 < len(im[0]) and new_y1 < len(im) and new_y2 < len(im))
         assert(new_x2 - new_x1 == region[2] - region[0])
         assert(new_y2 - new_y1 == region[3] - region[1])
-        
+
         center_x = region_width / 2 + new_x1
         center_y = region_height / 2 + new_y1
         farthest = math.sqrt((center_x - new_x1) ** 2 + (center_y - new_y1) ** 2)
@@ -231,65 +312,79 @@ def jitter_regions(im, regions, radius):
                 if patch_opacity > 1:
                     patch_opacity = 1
                 jittered[y, x, :] = (1 - patch_opacity) * im[y, x, :] + patch_opacity * patch[y-new_y1, x-new_x1, :]
-    
+
     return jittered
 
 clusters = []
 for c in args.clusters:
     clusters.append(int(c))
 
-for (dirpath, dirnames, filenames) in walk(args.input_dir):
-    for filename in filenames:
-        path = os.path.abspath(os.path.join(dirpath, filename))
-        print 'Processed', path
-        name_only, ext = os.path.splitext(filename)
-        
-        load_image(path)
-        
-        dim_feature_map = len(net.blobs[layer].data[0][0])
-        im = net.transformer.deprocess('data', net.blobs['data'].data[0])
-        plt.imshow(im)
-        axis = plt.gca()
-        
-        # Maps cluster ID to kmeans score threshold. Patches with activation larger than threshold
-        # (meaning distance too large) will not be considered
-        thresholds = {}
-        thres_percentage = 0.8
-        for c in clusters:
-            cluster_scores = [kmeans_scores[i] for i in range(n_vectors) if predicted[i] == c]
-            cluster_scores.sort(reverse=True)
-            thresholds[c] = cluster_scores[int(math.floor(len(cluster_scores) * thres_percentage)) - 1]
-        
-        detected_squares = []
-        
-        for y in range(dim_feature_map):
-            for x in range(dim_feature_map):
-                hypercolumn = net.blobs[layer].data[0][:,y,x].copy().reshape(1, -1)
-                prediction = kmeans_obj.predict(hypercolumn)
-                if prediction in clusters:
-                    rec_field = rf.get_receptive_field(layer, x, y)
-                    axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
-                        rec_field[2] - rec_field[0] + 1,
-                        rec_field[3] - rec_field[1] + 1,
-                        fill=False, edgecolor="red"))
-                    detected_squares.append(rec_field)
-                    
-        merged_regions = merge_squares(detected_squares)
-        for region in merged_regions:
-            axis.add_patch(Rectangle((region[0], region[1]),
-                region[2] - region[0] + 1,
-                region[3] - region[1] + 1,
-                fill=False, edgecolor="blue"))
-        
-        #plt.show()
-        if not args.interactive:
-            plt.savefig(os.path.join(args.output_dir, name_only + '_detected' + ext))
-        
-        plt.clf()
-        
-        jittered = jitter_regions(im, merged_regions, int(args.radius))
-        plt.imshow(jittered)
-        if args.interactive:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(args.output_dir, name_only + '_jit' + ext))
+
+def jitter_images():
+    for (dirpath, dirnames, filenames) in walk(args.input_dir):
+        for filename in filenames:
+            path = os.path.abspath(os.path.join(dirpath, filename))
+            print 'Processed', path
+            name_only, ext = os.path.splitext(filename)
+
+            load_image(path)
+
+            dim_feature_map = len(net.blobs[layer].data[0][0])
+            im = net.transformer.deprocess('data', net.blobs['data'].data[0])
+            plt.imshow(im)
+            axis = plt.gca()
+
+            # Maps cluster ID to kmeans score threshold. Patches with activation larger than threshold
+            # (meaning distance too large) will not be considered
+            thresholds = {}
+            thres_percentage = float(args.cluster_threshold)
+            for c in clusters:
+                cluster_scores = [kmeans_scores[i] for i in range(n_vectors) if predicted[i] == c]
+                cluster_scores.sort(reverse=True)
+                thresholds[c] = cluster_scores[int(math.floor(len(cluster_scores) * thres_percentage)) - 1]
+
+            detected_squares = {}
+
+            for y in range(dim_feature_map):
+                for x in range(dim_feature_map):
+                    hypercolumn = net.blobs[layer].data[0][:, y, x].copy().reshape(1, -1)
+                    prediction = kmeans_obj.predict(hypercolumn)[0]
+                    if prediction in clusters:
+                        rec_field = rf.get_receptive_field(layer, x, y)
+
+                        # HACK: if the borders touch any boundary of the image, don't use it
+                        if rec_field[0] == 0 or rec_field[1] == 0 or rec_field[2] == len(im[0]) - 1 or rec_field[3] == len(im) - 1:
+                            continue
+                        axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
+                            rec_field[2] - rec_field[0] + 1,
+                            rec_field[3] - rec_field[1] + 1,
+                            fill=False, edgecolor="red"))
+                        if prediction not in detected_squares:
+                            detected_squares[prediction] = []
+                        detected_squares[prediction].append(rec_field)
+
+            for k in detected_squares.keys():
+                merged = merge_squares_2(detected_squares[k], im)
+                for region in merged:
+                    axis.add_patch(Rectangle((region[0], region[1]),
+                        region[2] - region[0] + 1,
+                        region[3] - region[1] + 1,
+                        fill=False, edgecolor="blue"))
+
+            continue
+
+            if args.interactive:
+                plt.show()
+            else:
+                plt.savefig(os.path.join(args.output_dir, name_only + '_detected' + ext))
+
+            plt.clf()
+
+            jittered = jitter_regions(im, merged_regions, int(args.radius))
+            plt.imshow(jittered)
+            if args.interactive:
+                plt.show()
+            else:
+                plt.savefig(os.path.join(args.output_dir, name_only + '_jit' + ext))
+
+jitter_images()
