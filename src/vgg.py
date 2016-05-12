@@ -542,7 +542,7 @@ def dye_image_with_response(path):
     ax = plt.gca()
     im = net.transformer.deprocess('data', net.blobs['data'].data[0])
     ax.imshow(im)
-    ax.imshow(heatmap, cmap=plt.cm.Blues, alpha=0.7)
+    ax.imshow(heatmap, alpha=0.7)
     plt.show()
 
 
