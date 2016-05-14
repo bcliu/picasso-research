@@ -12,6 +12,9 @@
 # TODO: Ignore group if few patches are in it. meaning outlier
 # TODO: Should try to load multiple scales models at the same time, find which one is the most proper
 # TODO: scaling
+# TODO: avoid collision while jittering
+# TODO: suppress overlapping regions in merged regions. Ask both sides to retreat a little so that no overlaps
+# TODO: how to make movement even smoother: move a couple pixels at a time!!
 from constants import *
 import argparse
 from os import walk
@@ -20,6 +23,7 @@ import numpy as np
 import get_receptive_field as rf
 import random
 from Queue import Queue
+from PIL import Image
 
 # Set Caffe output level to Warnings
 os.environ['GLOG_minloglevel'] = '2'
@@ -39,8 +43,11 @@ parser.add_argument('-cd', '--clusters_dump', required=True)
 parser.add_argument('-c', '--clusters', nargs='+', required=True)
 parser.add_argument('-r', '--radius', required=True, help='Jitter radius')
 parser.add_argument('-ct', '--cluster_threshold', required=False, default=0.6, help='Cluster distance threshold (0-1)')
+parser.add_argument('-ot', '--overlap_threshold', required=False, default=0.6, help='Overlap threshold for equality of boxes')
 parser.add_argument('--interactive', action='store_true', default=False, required=False,
     help='Show which parts are jittered in a screen instead of saving')
+parser.add_argument('-bb', '--show_bounding_box', action='store_true', default=False, required=False,
+                    help='Show or save detected bounding boxes')
 args = parser.parse_args()
 
 if not args.interactive:
@@ -124,7 +131,7 @@ class UnionFind:
 
 # Returns 0 if the squares have significant overlaps, 1 otherwise
 def are_squares_overlap(tup1, tup2):
-    overlap_threshold = 0.6
+    overlap_threshold = float(args.overlap_threshold)
 
     # Can't be any overlap at all
     left = tup2
@@ -319,6 +326,17 @@ clusters = []
 for c in args.clusters:
     clusters.append(int(c))
 
+# Maps cluster ID to kmeans score threshold. Patches with activation larger than threshold
+# (meaning distance too large) will not be considered
+thresholds = {}
+thres_percentage = float(args.cluster_threshold)
+for c in clusters:
+    cluster_scores = [kmeans_scores[i] for i in range(n_vectors) if predicted[i] == c]
+    cluster_scores.sort(reverse=True)
+    thresholds[c] = cluster_scores[int(math.floor(len(cluster_scores) * thres_percentage)) - 1]
+
+# TODO: THRESHOLDS IS NOT USED AT ALL!!
+
 def jitter_images():
     for (dirpath, dirnames, filenames) in walk(args.input_dir):
         for filename in filenames:
@@ -327,26 +345,18 @@ def jitter_images():
             name_only, ext = os.path.splitext(filename)
 
             load_image(path)
-
             dim_feature_map = len(net.blobs[layer].data[0][0])
             im = net.transformer.deprocess('data', net.blobs['data'].data[0])
-            plt.imshow(im)
-            axis = plt.gca()
-
-            # Maps cluster ID to kmeans score threshold. Patches with activation larger than threshold
-            # (meaning distance too large) will not be considered
-            thresholds = {}
-            thres_percentage = float(args.cluster_threshold)
-            for c in clusters:
-                cluster_scores = [kmeans_scores[i] for i in range(n_vectors) if predicted[i] == c]
-                cluster_scores.sort(reverse=True)
-                thresholds[c] = cluster_scores[int(math.floor(len(cluster_scores) * thres_percentage)) - 1]
+            axis = None
+            if args.interactive:
+                plt.imshow(im)
+                axis = plt.gca()
 
             detected_squares = {}
 
             for y in range(dim_feature_map):
                 for x in range(dim_feature_map):
-                    hypercolumn = net.blobs[layer].data[0][:, y, x].copy().reshape(1, -1)
+                    hypercolumn = net.blobs[layer].data[0][:, y, x].reshape(1, -1)
                     prediction = kmeans_obj.predict(hypercolumn)[0]
                     if prediction in clusters:
                         rec_field = rf.get_receptive_field(layer, x, y)
@@ -366,23 +376,29 @@ def jitter_images():
             for k in detected_squares.keys():
                 all_squares += detected_squares[k]
             merged_regions = merge_squares(all_squares)
-            for region in merged_regions:
-                axis.add_patch(Rectangle((region[0], region[1]),
-                    region[2] - region[0] + 1,
-                    region[3] - region[1] + 1,
-                    fill=False, edgecolor="blue"))
 
-            if args.interactive:
+            if args.show_bounding_box:
+                for region in merged_regions:
+                    axis.add_patch(Rectangle((region[0], region[1]),
+                        region[2] - region[0] + 1,
+                        region[3] - region[1] + 1,
+                        fill=False, edgecolor="blue"))
+
+            if args.interactive and args.show_bounding_box:
                 plt.show()
-            else:
-                plt.savefig(os.path.join(args.output_dir, name_only + '_detected' + ext))
-            plt.clf()
+                plt.clf()
+            elif args.show_bounding_box:
+                plt.savefig(os.path.join(args.output_dir, name_only + '_detected' + ext), bbox_inches='tight', pad_inches=0)
+                plt.clf()
 
             jittered = jitter_regions(im, merged_regions, int(args.radius))
-            plt.imshow(jittered)
             if args.interactive:
+                plt.imshow(jittered)
                 plt.show()
             else:
-                plt.savefig(os.path.join(args.output_dir, name_only + '_jittered' + ext))
+                save_path = os.path.join(args.output_dir, name_only + '_jittered' + ext)
+                rescaled = (255.0 / jittered.max() * (jittered - jittered.min())).astype(np.uint8)
+                jittered_im = Image.fromarray(rescaled)
+                jittered_im.save(save_path)
 
 jitter_images()
