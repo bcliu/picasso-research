@@ -24,6 +24,8 @@ import get_receptive_field as rf
 import random
 from Queue import Queue
 from PIL import Image
+import fnmatch
+import time
 
 # Set Caffe output level to Warnings
 os.environ['GLOG_minloglevel'] = '2'
@@ -48,12 +50,16 @@ parser.add_argument('--interactive', action='store_true', default=False, require
     help='Show which parts are jittered in a screen instead of saving')
 parser.add_argument('-bb', '--show_bounding_box', action='store_true', default=False, required=False,
                     help='Show or save detected bounding boxes')
+parser.add_argument('--filename_filter', required=False, default=None, help='Controls which files are considered')
+parser.add_argument('--gpu', default=0, required=False)
 args = parser.parse_args()
 
 if not args.interactive:
     matplotlib.use('Agg') # For saving images to file
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+
+caffe.set_device(int(args.gpu))
 
 net = caffe.Classifier(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
         caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
@@ -340,12 +346,16 @@ for c in clusters:
 def jitter_images():
     for (dirpath, dirnames, filenames) in walk(args.input_dir):
         for filename in filenames:
+            if args.filename_filter is not None:
+                if not fnmatch.fnmatch(filename, args.filename_filter):
+                    continue
             path = os.path.abspath(os.path.join(dirpath, filename))
             print 'Processed', path
             name_only, ext = os.path.splitext(filename)
 
             load_image(path)
             dim_feature_map = len(net.blobs[layer].data[0][0])
+            num_feature_maps = len(net.blobs[layer].data[0])
             im = net.transformer.deprocess('data', net.blobs['data'].data[0])
             axis = None
             if args.interactive:
@@ -354,10 +364,15 @@ def jitter_images():
 
             detected_squares = {}
 
+            # NOTE that in a 256x56x56 layer,
+            #   dat.reshape(-1,56*56)[:,0] == dat[:,0,0]
+            #   dat.reshape(-1,56*56)[:,56] == dat[:,1,0]
+            hypercolumns = net.blobs[layer].data[0].reshape(num_feature_maps, -1)
+            # Vectorize. 20 TIMES FASTER THAN NONVECTORIZED VERSION!!!
+            predictions = kmeans_obj.predict(hypercolumns.transpose((1, 0)))
             for y in range(dim_feature_map):
                 for x in range(dim_feature_map):
-                    hypercolumn = net.blobs[layer].data[0][:, y, x].reshape(1, -1)
-                    prediction = kmeans_obj.predict(hypercolumn)[0]
+                    prediction = predictions[y*dim_feature_map+x]
                     if prediction in clusters:
                         rec_field = rf.get_receptive_field(layer, x, y)
 
