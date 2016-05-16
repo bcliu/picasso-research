@@ -1,10 +1,9 @@
 from constants import *
 import argparse
 
-image_path = research_root + 'images/eyes/7.jpg'
-
-parser = argparse.ArgumentParser(description='LOL')
-parser.add_argument('--path', default=image_path, required=False)
+parser = argparse.ArgumentParser()
+parser.add_argument('--image_path', required=True)
+parser.add_argument('--alexnet_model', default='bvlc_reference_caffenet.caffemodel', required=False)
 args = parser.parse_args()
 
 import numpy as np
@@ -16,19 +15,20 @@ sys.path.insert(0, caffe_root + 'python')
 
 import caffe
 
+
 def vis_square(data, padsize=1, padval=0):
     data -= data.min()
     data /= data.max()
-    
+
     # force the number of filters to be square
     n = int(np.ceil(np.sqrt(data.shape[0])))
     padding = ((0, n ** 2 - data.shape[0]), (0, padsize), (0, padsize)) + ((0, 0),) * (data.ndim - 3)
     data = np.pad(data, padding, mode='constant', constant_values=(padval, padval))
-    
+
     # tile the filters into an image
     data = data.reshape((n, n) + data.shape[1:]).transpose((0, 2, 1, 3) + tuple(range(4, data.ndim + 1)))
     data = data.reshape((n * data.shape[1], n * data.shape[3]) + data.shape[4:])
-    
+
     plt.imshow(data)
 
 plt.rcParams['figure.figsize'] = (10, 10)
@@ -37,7 +37,7 @@ plt.rcParams['image.cmap'] = 'gray'
 
 caffe.set_mode_cpu()
 net = caffe.Net(caffe_root + 'models/bvlc_reference_caffenet/deploy.prototxt',
-                caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel',
+                caffe_root + 'models/bvlc_reference_caffenet/' + args.alexnet_model,
                 caffe.TEST)
 
 # input preprocessing: 'data' is the name of the input blob == net.inputs[0]
@@ -48,7 +48,7 @@ transformer.set_raw_scale('data', 255)  # the reference model operates on images
 transformer.set_channel_swap('data', (2,1,0))
 net.blobs['data'].reshape(50,3,227,227)
 
-net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(args.path))
+net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(args.image_path))
 out = net.forward()
 
 print("Predicted class is #{}.".format(out['prob'][0].argmax()))
@@ -98,4 +98,4 @@ vis_square(feat, padval=0.2)
 # feat = net.blobs['prob'].data[0]
 # plt.plot(feat.flat)
 
-plt.show()
+#plt.show()
