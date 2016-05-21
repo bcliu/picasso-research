@@ -10,3 +10,5 @@ references/visualize_dl-master/constants.py
 *.png
 *.jpg
 *.out
+*.caffemodel
+*.solverstate

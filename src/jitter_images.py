@@ -37,7 +37,7 @@ if mode == 'cpu':
 else:
     caffe.set_mode_gpu()
 
-parser = argparse.ArgumentParser(description='')
+parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input_dir', required=True)
 parser.add_argument('-o', '--output_dir', required=True)
 parser.add_argument('-ld', '--layer_dump', required=True)
@@ -53,6 +53,9 @@ parser.add_argument('-bb', '--show_bounding_box', action='store_true', default=F
 parser.add_argument('--filename_filter', required=False, default=None, help='Controls which files are considered')
 parser.add_argument('--gpu', default=0, required=False)
 args = parser.parse_args()
+
+if not os.path.exists(args.output_dir):
+    os.makedirs(args.output_dir)
 
 if not args.interactive:
     matplotlib.use('Agg') # For saving images to file
@@ -350,7 +353,9 @@ def jitter_images():
                 if not fnmatch.fnmatch(filename, args.filename_filter):
                     continue
             path = os.path.abspath(os.path.join(dirpath, filename))
-            print 'Processed', path
+            sys.stdout.write("\x1b[2K\rProcessed: %s" % path)
+            sys.stdout.flush()
+
             name_only, ext = os.path.splitext(filename)
 
             load_image(path)
