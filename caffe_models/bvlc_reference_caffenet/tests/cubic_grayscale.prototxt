@@ -13,7 +13,7 @@ layer {
     mean_file: "/home/chenl/software/caffe-rc3/data/ilsvrc12/imagenet_mean.binaryproto"
   }
   data_param {
-    source: "/mnt/temp_drive_1/chen_data/cubic_grayscale_lmdb"
+    source: "/home/chenl/drive/cubic_grayscale_lmdb"
     batch_size: 50
     backend: LMDB
   }
