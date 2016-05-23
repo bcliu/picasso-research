@@ -52,11 +52,6 @@ import sklearn.datasets
 import skimage
 
 import get_receptive_field as rf
-
-# Make sure that caffe is on the python path:
-import sys
-sys.path.insert(0, caffe_root + 'python')
-
 import caffe
 
 # Find better way to write it to distribute more evenly
@@ -132,7 +127,7 @@ if args.load_layer_dump_from is not None:
     [args_images, args_layer, args_sample_fraction,
         args_center_path, args_center_x,
         sample_mask, vectors, vec_origin_file, vec_location] = pickle.load(f)
-    
+
     args.images = args_images
     args.layer = args_layer
     args.sample_fraction = args_sample_fraction
@@ -222,7 +217,7 @@ else:
     n_restarts = 10
     kmeans_obj = KMeans(init='k-means++', n_clusters=n_clusters, n_init=n_restarts)
     predicted = kmeans_obj.fit_predict(vectors)
-    
+
     # Precompute distances of every vector to its cluster center
     kmeans_scores = []
     for vec_i in range(len(vectors)):
@@ -234,7 +229,7 @@ else:
         pickle.dump([n_clusters, kmeans_obj, predicted, kmeans_scores], f)
         f.close()
         print 'Finished saving classification dump'
-        
+
 def do_tsne(data):
     tsne_model = TSNE(n_components=2, init='pca')
     trans_tsne = tsne_model.fit_transform(data)
@@ -246,7 +241,7 @@ def plot_clusters_2d(data, labels, selected_rows):
     plt.scatter(data[selected_rows, 0], data[selected_rows, 1], c=labels[selected_rows], cmap=plt.get_cmap('Spectral'), lw=0)
     plt.show()
 
-    
+
 #plot_clusters_2d(vectors20k_tsne[np.logical_or(predicted20k == 26, predicted20k == 54), :], predicted20k[np.logical_or(predicted20k == 26, predicted20k == 54)])
 
 ##### PCA
@@ -278,7 +273,7 @@ def get_sparsity(data):
     for r in data:
         numer = numer + r / n
         denom = denom + r**2 / n
-        
+
     A = numer**2 / denom
     S = (1 - A) / (1 - 1/n)
     return A, S
@@ -316,23 +311,23 @@ def plot_raw_activation(cluster_i):
 
 def get_top_n_in_cluster(cluster_i, n):
     scores = []
-    
+
     for vec_id in range(len(vectors)):
         if predicted[vec_id] == cluster_i:
             scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
-            
+
     scores.sort(key=lambda tup: -tup[1])
     if n == -1:
         return scores
     return scores[0:n]
-    
+
 
 def get_top_in_clusters(clusters_i):
     scores = {}
-    
+
     for i in clusters_i:
         scores[i] = []
-    
+
     if len(kmeans_scores) == 0:
         print 'Precomputed kmeans scores do not exist'
         for vec_i in range(len(vectors)):
@@ -342,7 +337,7 @@ def get_top_in_clusters(clusters_i):
         for vec_i in range(len(vectors)):
             if predicted[vec_i] in clusters_i:
                 scores[predicted[vec_i]].append((vec_i, kmeans_scores[vec_i]))
-    
+
     out = []
     for i in clusters_i:
         scores[i].sort(key=lambda tup: -tup[1])
@@ -356,7 +351,7 @@ def plot_clusters_embedding():
     _, centers_2d = do_tsne(kmeans_obj.cluster_centers_)
     plt.scatter(centers_2d[:, 0], centers_2d[:, 1])
     clusters_top = get_top_in_clusters(range(args.n_clusters))
-    
+
     for cluster_i in range(args.n_clusters):
         top_vector = clusters_top[cluster_i]
         im = get_original_patch_of_vec(top_vector)
@@ -364,47 +359,47 @@ def plot_clusters_embedding():
         ab = AnnotationBbox(imagebox, (0., 0.), xybox=(centers_2d[cluster_i, 0], centers_2d[cluster_i, 1]),
                             pad=0, frameon=False, xycoords='data', boxcoords="data")
         ax.add_artist(ab)
-    
+
     plt.show()
 
 
 def plot_activation(cluster_i, top_n=4):
     grid_dims = (8, 9)
     ax = plt.subplot2grid(grid_dims, (0, 0), colspan=7, rowspan=8)
-    
+
     bigsum, count = get_activations_of_cluster(cluster_i)
     bigsum = bigsum / count
-    
+
     # Get sorted indexes
     sorted_indexes = [i[0] for i in sorted(enumerate(bigsum), key=lambda x:x[1], reverse=True)]
     top_indexes = [sorted_indexes[x] for x in range(top_n)]
     top_responses = [bigsum[sorted_indexes[x]] for x in range(top_n)]
-    
+
     bigsum.sort()
     bigsum = bigsum[::-1]
     ax.plot(range(len(bigsum)), bigsum, 'bo-')
     ax.set_title(args.layer + ' Cluster #' + str(cluster_i) + ' (' + str(args.n_clusters) + ' total)')
     ax.set_xlabel('Neuron #')
     ax.set_ylabel('Average activation')
-    
+
     print 'Highest neuron responses:'
     for i in range(top_n):
         print 'Neuron #', top_indexes[i], ', mean response: ', top_responses[i]
-        
+
         plt.annotate(
             'Neuron #' + str(top_indexes[i]) + '\navg: ' + str(top_responses[i]),
             xy = (i, bigsum[i]), xytext = (100 + 20 * i, -50 - 20 * i),
             textcoords = 'offset points', ha = 'right', va = 'bottom',
             bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
             arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
-    
+
     # Print sparsity metric
     A, S = get_sparsity(bigsum)
     plt.annotate(
         'Sparsity: S=' + str(S),
         xy = (0.9, 0.9), xytext = (0.9, 0.9),
         textcoords = 'axes fraction', ha = 'right', va = 'bottom')
-    
+
     # Rightmost column patch plot
     print 'Looking for vectors closest to the cluster center...'
     top_vectors = get_top_n_in_cluster(cluster_i, 8)
@@ -414,7 +409,7 @@ def plot_activation(cluster_i, top_n=4):
             ax2.set_title('Patches\nClosest\nto Cluster\nCenter', {'fontsize': 10})
         plt.axis('off')
         ax2.imshow(get_original_patch_of_vec(vec_id))
-    
+
     # Rightmost column: patches that gen highest response for each neuron
     all_vectors = np.array(vectors)
     for i, neuron_i in enumerate(top_indexes):
@@ -424,7 +419,7 @@ def plot_activation(cluster_i, top_n=4):
         plt.axis('off')
         ax3.set_title('Neuron #' + str(neuron_i), {'fontsize': 10})
         ax3.imshow(get_original_patch_of_vec(max_vec_id))
-    
+
     plt.show()
 
 
@@ -432,11 +427,11 @@ def plot_activation(cluster_i, top_n=4):
 def plot_stimuli_response(neuron_i, inputs=vectors, top_n=10):
     grid_dims = (top_n, top_n)
     ax = plt.subplot2grid(grid_dims, (0, 0), colspan=top_n-1, rowspan=top_n)
-    
+
     all_vectors = np.array(inputs)
     responses = all_vectors[:, neuron_i]
     len_responses = len(responses)
-    
+
     sorted_indexes = [i[0] for i in sorted(enumerate(responses), key=lambda x:x[1], reverse=True)]
     responses.sort()
     responses = responses[::-1]
@@ -444,7 +439,7 @@ def plot_stimuli_response(neuron_i, inputs=vectors, top_n=10):
     ax.set_title(args.layer + ' Neuron #' + str(neuron_i) + ' Responses to ' + str(len_responses) + ' Stimuli')
     ax.set_xlabel('Stimulus #')
     ax.set_ylabel('Activation')
-    
+
     # Include patches with top n responses
     for i in range(top_n):
         ax2 = plt.subplot2grid(grid_dims, (i, top_n - 1))
@@ -453,16 +448,16 @@ def plot_stimuli_response(neuron_i, inputs=vectors, top_n=10):
             ax2.set_title('Top ' + str(top_n) + '\nPatches', {'fontsize': 10})
         im = get_original_patch_of_vec(sorted_indexes[i])
         ax2.imshow(im)
-        
+
     # Find number of stimuli that generate response > 0.5*MAX
     num_half_height_stimuli = 0
     for i in range(len_responses):
         if responses[i] > 0.5 * responses[0]:
             num_half_height_stimuli = num_half_height_stimuli + 1
-            
+
     print '# responses greater than half height:', num_half_height_stimuli, '(', num_half_height_stimuli * 1.0 / len_responses, ')'
     print 'Half height:', 0.5 * responses[0]
-    
+
     plt.show()
 
 
@@ -474,28 +469,28 @@ def do_pca_on_neuron(neuron_i, do_ica=False):
     patch_dim = int(rec_field[2] - rec_field[0] + 1)
     print 'Patch dimension is', patch_dim
     print 'Receptive field of neuron in the center hypercolumn is', rec_field
-    
+
     for i in range(len(predicted)):
         if vectors[i][neuron_i] > half_height:
             im = get_original_patch_of_vec(i)
             if (len(im) == patch_dim) and (len(im[0]) == patch_dim):
                 patches.append(skimage.color.rgb2gray(im)) # WARNING: TURNED INTO GRAYSCALE!!
                 # ... but should try to do PCA on 30000 dimensions and see what you will get too
-    
+
     print 'Found', len(patches), 'patches with activations greater than half height'
     patches = np.array(patches)
     mean_patch = patches.mean(0)
-    
+
     # Subtract the mean from all data
     flattened = []
     for i in range(len(patches)):
         patches[i] -= mean_patch
         flattened.append(patches[i].flatten())
-    
+
     patches_pca = FastICA(n_components=100)
     patches_trans = patches_pca.fit_transform(flattened)
     #print sum(patches_pca.explained_variance_ratio_)
-    
+
     for start_id in range(0, 99, 25):
         fig = plt.figure()
         dim_plot = 5
@@ -505,17 +500,17 @@ def do_pca_on_neuron(neuron_i, do_ica=False):
             plt.imshow(patches_pca.components_[fig_id + start_id].reshape(100, 100))
             plt.axis('off')
         plt.show()
-    
+
     # Treat the coefficients as Gaussians and sample from them
     synthesized = np.empty(10000)
     for i in range(100):
         sampled = sklearn.datasets.make_gaussian_quantiles([patches_trans[:, i].mean()], patches_trans[:, i].var(), n_samples=1, n_classes=1, n_features=1)[0][0][0]
         synthesized += sampled * patches_pca.components_[i]
-        
+
     tmp = synthesized.reshape(100, 100) + mean_patch
     plt.imshow(tmp)
     plt.show()
-    
+
     return mean_patch, flattened, patches_pca, patches_trans
 
 
@@ -525,20 +520,20 @@ def dye_image_with_response(path):
     heatmap = np.empty([224, 224])
     load_image(path)
     layer_response = net.blobs[args.layer].data[0]
-    
+
     # Find the highest response in each hypercolumn
     dim = len(layer_response[0])
     for x in range(dim):
         for y in range(dim):
             max_response = np.max(layer_response[:, y, x])
             rec_field = rf.get_receptive_field(args.layer, x, y)
-            
+
             # Update the heatmap with largest activation values
             for heatmap_x in range(rec_field[0], rec_field[2] + 1):
                 for heatmap_y in range(rec_field[1], rec_field[3] + 1):
                     if heatmap[heatmap_y, heatmap_x] < max_response:
                         heatmap[heatmap_y, heatmap_x] = max_response
-                        
+
     ax = plt.gca()
     im = net.transformer.deprocess('data', net.blobs['data'].data[0])
     ax.imshow(im)
@@ -564,7 +559,7 @@ def find_patches_in_cluster(cluster_i, image_path, dist_thres_percentage=1.0):
     # Given an image, find the patches in the image that have responses in the given cluster
     load_image(image_path, False)
     dim_filter = len(net.blobs[args.layer].data[0][0])
-    
+
     plt.imshow(net.transformer.deprocess('data', net.blobs['data'].data[0]))
     axis = plt.gca()
 
@@ -643,7 +638,7 @@ def view_n_from_clusters(from_cluster, to_cluster, n_each, save_plots=False):
             fig_id = fig_id + 1
 
             plt.axis('off')
-    
+
     if save_plots:
         plt.savefig(os.path.join(args.save_plots_to, args.layer + '_' + 'clusters' + str(from_cluster) + 'to' + str(to_cluster) + '.png'))
     else:

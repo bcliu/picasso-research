@@ -422,3 +422,6 @@ def jitter_images():
                 jittered_im.save(save_path)
 
 jitter_images()
+
+
+# TODO: IT'S NOT HANDLING LFW DATASET WELL!!! RETEST!!!

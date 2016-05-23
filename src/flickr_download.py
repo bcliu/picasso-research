@@ -4,39 +4,43 @@ import urllib
 import json
 import multiprocessing
 from skimage import io
+import argparse
 
-SORT_BY_OPTIONS = [ 'interestingness-desc', 'relevance', 'date-taken-desc' ]
+SORT_BY_OPTIONS = ['interestingness-desc', 'relevance', 'date-taken-desc']
 DOWNLOAD_URL_KEY = 'url_l'
 
 API_KEY = 'dac1f5e9f956e8cc64a3bf1d1141c86c'
 SORT_BY = SORT_BY_OPTIONS[1]
 
-query = sys.argv[1]
-query_ = query.replace(' ', '_')
-path = sys.argv[2]
-num_to_download = int(sys.argv[3])
-start_from_page = int(sys.argv[4])
+parser = argparse.ArgumentParser()
+parser.add_argument('-q', '--query', required=True)
+parser.add_argument('-s', '--save_to', required=True)
+parser.add_argument('-is', '--image_urls_save_to', required=True)
+parser.add_argument('-n', '--num_requested', type=int, required=True)
+parser.add_argument('-p', '--start_page', type=int, default=1)
+args = parser.parse_args()
+
+query = args.query.replace(' ', '_')
 
 print 'Searching for ' + query + ', sorted by ' + SORT_BY
-print 'Downloading ' + str(num_to_download)
+print 'Downloading ' + str(args.num_requested)
 
-num_downloaded = 0
-current_page = start_from_page - 1
+current_page = args.start_page
 
-file_urls = []
+file_urls = set()
 file_paths = []
 
-while num_downloaded <= num_to_download:
-    current_page += 1
+while len(file_urls) <= args.num_requested:
     params = urllib.urlencode({
         'method': 'flickr.photos.search',
         'api_key': API_KEY,
         'text': query,
-        'safe_search': 1,
+        'safe_search': 2,
         'content_type': 1,
         'media': 'photos',
-        'per_page': 300,
+        'per_page': 500,
         'format': 'json',
+        'license': '0, 1, 2, 3, 4, 5, 6, 7, 8',
         'nojsoncallback': 1,
         'sort': SORT_BY,
         'extras': DOWNLOAD_URL_KEY,  # Retrieve download URL
@@ -50,15 +54,13 @@ while num_downloaded <= num_to_download:
     for photo in photos:
         if DOWNLOAD_URL_KEY in photo:
             url = photo.get(DOWNLOAD_URL_KEY)
-            file_urls.append(url)
-            file_paths.append(os.path.join(path, query_ + str(num_downloaded) + '.jpg'))
-            num_downloaded += 1
-            sys.stdout.write("\rFinished: %d%%" % num_downloaded)
+            file_urls.add(url)
+            file_paths.append(os.path.join(args.save_to, query + str(len(file_urls)) + '.jpg'))
+            sys.stdout.write("\rDiscovered %d unique images as of page %d" % (len(file_urls), current_page))
             sys.stdout.flush()
 
-            if num_downloaded >= num_to_download:
-                print 'Done retrieving all image URLs'
-                break
+    current_page += 1
+print '\n'
 
 
 def download_image(args_tuple):
@@ -67,18 +69,22 @@ def download_image(args_tuple):
         url, filename = args_tuple
         if not os.path.exists(filename):
             urllib.urlretrieve(url, filename)
-        test_read_image = io.imread(filename)
+        io.imread(filename)
         return True
     except KeyboardInterrupt:
         raise Exception()  # multiprocessing doesn't catch keyboard exceptions
     except:
         return False
 
-
 print 'Downloading...'
 num_workers = 16
 if num_workers <= 0:
     num_workers = multiprocessing.cpu_count() + num_workers
-pool = multiprocessing.Pool(processes=num_workers)
-map_args = zip(file_urls, file_paths)
-results = pool.map(download_image, map_args)
+#pool = multiprocessing.Pool(processes=num_workers)
+#map_args = zip(file_urls, file_paths)
+#results = pool.map(download_image, map_args)
+
+f = open(args.image_urls_save_to, 'wb')
+for u in file_urls:
+    f.write(u + '\n')
+f.close()
