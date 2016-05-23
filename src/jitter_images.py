@@ -389,10 +389,11 @@ def jitter_images():
                         if rec_field[0] == 0 or rec_field[1] == 0 or rec_field[2] == len(im[0]) - 1 or rec_field[3] == len(im) - 1:
                             continue
 
-                        axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
-                            rec_field[2] - rec_field[0] + 1,
-                            rec_field[3] - rec_field[1] + 1,
-                            fill=False, edgecolor='red'))
+                        if args.show_bounding_box:
+                            axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
+                                rec_field[2] - rec_field[0] + 1,
+                                rec_field[3] - rec_field[1] + 1,
+                                fill=False, edgecolor='red'))
                         if prediction not in detected_squares:
                             detected_squares[prediction] = []
                         detected_squares[prediction].append(rec_field)
@@ -426,4 +427,7 @@ def jitter_images():
                 jittered_im = Image.fromarray(rescaled)
                 jittered_im.save(save_path)
 
+start = time.time()
 jitter_images()
+end = time.time()
+print 'Took', end - start, 'seconds'

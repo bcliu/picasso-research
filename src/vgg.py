@@ -1,3 +1,5 @@
+# TODO kmeans score is different from distance, but orders are the same -- objective function is ^2 of distance
+
 from constants import *
 import argparse
 from os import walk
