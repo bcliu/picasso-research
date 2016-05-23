@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Main dir for output files
-main_dir=/mnt/temp_drive_1/chen_data
+main_dir=/home/chenl/drive
 # Subset of imagenet used for training
 IMAGENET_TRAIN_PATH=$1
 IMAGENET_TRAIN_FILELIST=$2

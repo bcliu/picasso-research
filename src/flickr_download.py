@@ -5,6 +5,7 @@ import json
 import multiprocessing
 from skimage import io
 import argparse
+import time
 
 SORT_BY_OPTIONS = ['interestingness-desc', 'relevance', 'date-taken-desc']
 DOWNLOAD_URL_KEY = 'url_l'
@@ -29,6 +30,9 @@ current_page = args.start_page
 
 file_urls = set()
 file_paths = []
+previous_urls_obtained = 0
+max_taken_date = int(time.time())
+date_range = 20000000
 
 while len(file_urls) <= args.num_requested:
     params = urllib.urlencode({
@@ -44,7 +48,9 @@ while len(file_urls) <= args.num_requested:
         'nojsoncallback': 1,
         'sort': SORT_BY,
         'extras': DOWNLOAD_URL_KEY,  # Retrieve download URL
-        'page': current_page
+        'page': current_page,
+        'max_taken_date': max_taken_date,
+        'min_taken_date': max_taken_date - date_range
     })
 
     url = 'https://api.flickr.com/services/rest/' + '?' + params
@@ -59,6 +65,13 @@ while len(file_urls) <= args.num_requested:
             sys.stdout.write("\rDiscovered %d unique images as of page %d" % (len(file_urls), current_page))
             sys.stdout.flush()
 
+    if len(file_urls) == previous_urls_obtained:
+        print '\nNo new images obtained in new request. Changing taken dates...'
+        max_taken_date -= date_range + 1
+        print 'Max taken date changed to ' + str(max_taken_date)
+        current_page = 1
+
+    previous_urls_obtained = len(file_urls)
     current_page += 1
 print '\n'
 
@@ -80,9 +93,9 @@ print 'Downloading...'
 num_workers = 16
 if num_workers <= 0:
     num_workers = multiprocessing.cpu_count() + num_workers
-#pool = multiprocessing.Pool(processes=num_workers)
-#map_args = zip(file_urls, file_paths)
-#results = pool.map(download_image, map_args)
+pool = multiprocessing.Pool(processes=num_workers)
+map_args = zip(file_urls, file_paths)
+results = pool.map(download_image, map_args)
 
 f = open(args.image_urls_save_to, 'wb')
 for u in file_urls:

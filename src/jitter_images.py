@@ -15,6 +15,7 @@
 # TODO: avoid collision while jittering
 # TODO: suppress overlapping regions in merged regions. Ask both sides to retreat a little so that no overlaps
 # TODO: how to make movement even smoother: move a couple pixels at a time!!
+# TODO: try use neurons instead of clusters
 from constants import *
 import argparse
 from os import walk
@@ -342,9 +343,9 @@ thres_percentage = float(args.cluster_threshold)
 for c in clusters:
     cluster_scores = [kmeans_scores[i] for i in range(n_vectors) if predicted[i] == c]
     cluster_scores.sort(reverse=True)
-    thresholds[c] = cluster_scores[int(math.floor(len(cluster_scores) * thres_percentage)) - 1]
+    thresholds[c] = cluster_scores[int(math.floor(len(cluster_scores) * thres_percentage))]
+    print 'Range of all scores for cluster', c, ':', min(cluster_scores), ' - ', max(cluster_scores)
 
-# TODO: THRESHOLDS IS NOT USED AT ALL!!
 
 def jitter_images():
     for (dirpath, dirnames, filenames) in walk(args.input_dir):
@@ -374,20 +375,24 @@ def jitter_images():
             #   dat.reshape(-1,56*56)[:,56] == dat[:,1,0]
             hypercolumns = net.blobs[layer].data[0].reshape(num_feature_maps, -1)
             # Vectorize. 20 TIMES FASTER THAN NONVECTORIZED VERSION!!!
-            predictions = kmeans_obj.predict(hypercolumns.transpose((1, 0)))
+            transposed = hypercolumns.transpose((1, 0))
+            predictions = kmeans_obj.predict(transposed)
             for y in range(dim_feature_map):
                 for x in range(dim_feature_map):
-                    prediction = predictions[y*dim_feature_map+x]
-                    if prediction in clusters:
+                    id = y * dim_feature_map + x
+                    prediction = predictions[id]
+                    score = kmeans_obj.score(hypercolumns[:, id].reshape(1, -1))
+                    if prediction in clusters and score > thresholds[prediction]:
                         rec_field = rf.get_receptive_field(layer, x, y)
 
                         # HACK: if the borders touch any boundary of the image, don't use it
                         if rec_field[0] == 0 or rec_field[1] == 0 or rec_field[2] == len(im[0]) - 1 or rec_field[3] == len(im) - 1:
                             continue
-                        # axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
-                        #     rec_field[2] - rec_field[0] + 1,
-                        #     rec_field[3] - rec_field[1] + 1,
-                        #     fill=False, edgecolor="red"))
+
+                        axis.add_patch(Rectangle((rec_field[0], rec_field[1]),
+                            rec_field[2] - rec_field[0] + 1,
+                            rec_field[3] - rec_field[1] + 1,
+                            fill=False, edgecolor='red'))
                         if prediction not in detected_squares:
                             detected_squares[prediction] = []
                         detected_squares[prediction].append(rec_field)
@@ -422,6 +427,3 @@ def jitter_images():
                 jittered_im.save(save_path)
 
 jitter_images()
-
-
-# TODO: IT'S NOT HANDLING LFW DATASET WELL!!! RETEST!!!
