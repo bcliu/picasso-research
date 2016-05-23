@@ -377,11 +377,13 @@ def jitter_images():
             # Vectorize. 20 TIMES FASTER THAN NONVECTORIZED VERSION!!!
             transposed = hypercolumns.transpose((1, 0))
             predictions = kmeans_obj.predict(transposed)
+            # Vectorize: use transformed instead of .score() on each vector, 8x speedup
+            transformed = kmeans_obj.transform(transposed)
             for y in range(dim_feature_map):
                 for x in range(dim_feature_map):
-                    id = y * dim_feature_map + x
-                    prediction = predictions[id]
-                    score = kmeans_obj.score(hypercolumns[:, id].reshape(1, -1))
+                    i = y * dim_feature_map + x
+                    prediction = predictions[i]
+                    score = - transformed[i, prediction] ** 2
                     if prediction in clusters and score > thresholds[prediction]:
                         rec_field = rf.get_receptive_field(layer, x, y)
 
@@ -430,4 +432,4 @@ def jitter_images():
 start = time.time()
 jitter_images()
 end = time.time()
-print 'Took', end - start, 'seconds'
+print '\nTook', end - start, 'seconds'
