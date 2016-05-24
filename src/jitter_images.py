@@ -59,7 +59,7 @@ if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
 
 if not args.interactive:
-    matplotlib.use('Agg') # For saving images to file
+    matplotlib.use('Agg')  # For saving images to file
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 

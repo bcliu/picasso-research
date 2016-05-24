@@ -10,5 +10,5 @@ max_iter: 100000
 momentum: 0.9
 weight_decay: 0.0005
 snapshot: 10000
-snapshot_prefix: "/home/chenl/software/caffe-rc3/models/bvlc_reference_caffenet/unique_flickr_5k_snap"
+snapshot_prefix: "/home/chenl/software/caffe-rc3/models/bvlc_reference_caffenet/lfw_5k_conv32_5px_snap"
 solver_mode: GPU
