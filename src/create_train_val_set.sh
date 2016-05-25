@@ -2,15 +2,27 @@
 
 # Main dir for output files
 main_dir=/home/chenl/drive
-# Subset of imagenet used for training
-IMAGENET_TRAIN_PATH=$1
-IMAGENET_TRAIN_FILELIST=$2
-# Subset of imagenet used for validation
-IMAGENET_VAL_PATH=$3
-IMAGENET_VAL_FILELIST=$4
-# Exclude mask class images when generating training list
+
+# If validation set dir and filelist are provided, generate val set; otherwise, don't
+if [ $# -eq 5 ]; then
+    # Subset of imagenet used for training
+    IMAGENET_TRAIN_PATH=$1
+    IMAGENET_TRAIN_FILELIST=$2
+    # Subset of imagenet used for validation
+    IMAGENET_VAL_PATH=$3
+    IMAGENET_VAL_FILELIST=$4
+    # Exclude mask class images when generating training list
+    FACE_CLASS_PATH=$5
+elif [ $# -eq 3 ]; then
+    IMAGENET_TRAIN_PATH=$1
+    IMAGENET_TRAIN_FILELIST=$2
+    FACE_CLASS_PATH=$5
+else
+    echo "Unrecognized number of arguments"
+    exit 1
+fi
+
 MASK_CLASS=643
-FACE_CLASS_PATH=$5
 
 train_path_dir_name=$(basename $IMAGENET_TRAIN_PATH)
 face_path_dir_name=$(basename $FACE_CLASS_PATH)
@@ -50,17 +62,23 @@ if [ -f $VAL_EXCLUDED_OUT ] ; then
     rm $VAL_EXCLUDED_OUT
 fi
 
-python ~/research/src/filter_filelist.py -i $IMAGENET_VAL_FILELIST -o $VAL_EXCLUDED_OUT -l $MASK_CLASS
+if [ $# -eq 5 ]; then
+    python ~/research/src/filter_filelist.py -i $IMAGENET_VAL_FILELIST -o $VAL_EXCLUDED_OUT -l $MASK_CLASS
+fi
 
 # Create a dir that contains all training images
 mkdir all_train
 mv $IMAGENET_TRAIN_PATH all_train/
 mv $FACE_CLASS_PATH     all_train/
 
-# Call script to create lmdb file of training and validation sets
-~/research/src/create_dataset.sh $main_dir/all_train $main_dir/train.txt $IMAGENET_VAL_PATH $main_dir/val.txt \
-    $main_dir/${face_path_dir_name}_train_lmdb \
-    $main_dir/${face_path_dir_name}_val_lmdb
+if [ $# -eq 5 ]; then
+    # Call script to create lmdb file of training and validation sets
+    ~/research/src/create_lmdb.sh $main_dir/all_train $main_dir/train.txt $IMAGENET_VAL_PATH $main_dir/val.txt \
+        $main_dir/${face_path_dir_name}_train_lmdb \
+        $main_dir/${face_path_dir_name}_val_lmdb
+else
+    ~/research/src/create_lmdb.sh $main_dir/all_train $main_dir/train.txt $main_dir/${face_path_dir_name}_train_lmdb
+fi
 
 # Move the training directories back to their original locations
 mv all_train/$train_path_dir_name $IMAGENET_TRAIN_PATH
@@ -71,4 +89,6 @@ rmdir all_train
 rm $TRAIN_EXCLUDED_OUT
 rm $TRAIN_FACE_OUT
 rm $main_dir/train.txt
-rm $main_dir/val.txt
+if [ $# -eq 5 ]; then
+    rm $VAL_EXCLUDED_OUT
+fi

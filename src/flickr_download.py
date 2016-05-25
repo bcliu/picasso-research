@@ -7,6 +7,17 @@ from skimage import io
 import argparse
 import time
 
+
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 SORT_BY_OPTIONS = ['interestingness-desc', 'relevance', 'date-taken-desc']
 DOWNLOAD_URL_KEY = 'url_l'
 
@@ -16,15 +27,14 @@ SORT_BY = SORT_BY_OPTIONS[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('-q', '--query', required=True)
 parser.add_argument('-s', '--save_to', required=True)
-parser.add_argument('-is', '--image_urls_save_to', required=True)
 parser.add_argument('-n', '--num_requested', type=int, required=True)
 parser.add_argument('-p', '--start_page', type=int, default=1)
 args = parser.parse_args()
 
 query = args.query.replace(' ', '_')
 
-print 'Searching for ' + query + ', sorted by ' + SORT_BY
-print 'Downloading ' + str(args.num_requested)
+print Colors.OKGREEN + 'Searching for ' + query + ', sorted by ' + SORT_BY + Colors.ENDC
+print Colors.OKGREEN + 'Downloading ' + str(args.num_requested) + Colors.ENDC
 
 current_page = args.start_page
 
@@ -34,7 +44,11 @@ previous_urls_obtained = 0
 max_taken_date = int(time.time())
 date_range = 20000000
 
-while len(file_urls) <= args.num_requested:
+save_to_dir = os.path.abspath(args.save_to)
+if not os.path.exists(save_to_dir):
+    os.makedirs(save_to_dir)
+
+while len(file_urls) < args.num_requested:
     params = urllib.urlencode({
         'method': 'flickr.photos.search',
         'api_key': API_KEY,
@@ -61,15 +75,18 @@ while len(file_urls) <= args.num_requested:
         if DOWNLOAD_URL_KEY in photo:
             url = photo.get(DOWNLOAD_URL_KEY)
             file_urls.add(url)
-            file_paths.append(os.path.join(args.save_to, query + str(len(file_urls)) + '.jpg'))
+            file_paths.append(os.path.join(save_to_dir, query + str(len(file_urls)) + '.jpg'))
             sys.stdout.write("\rDiscovered %d unique images as of page %d" % (len(file_urls), current_page))
             sys.stdout.flush()
 
+            if len(file_urls) >= args.num_requested:
+                break
+
     if len(file_urls) == previous_urls_obtained:
-        print '\nNo new images obtained in new request. Changing taken dates...'
+        print '\n' + Colors.FAIL + 'No new images obtained in new request. Changing taken dates...' + Colors.ENDC
         max_taken_date -= date_range + 1
-        print 'Max taken date changed to ' + str(max_taken_date)
-        current_page = 1
+        print Colors.FAIL + 'Max taken date changed to ' + str(max_taken_date) + Colors.ENDC
+        current_page = 0
 
     previous_urls_obtained = len(file_urls)
     current_page += 1
@@ -96,8 +113,3 @@ if num_workers <= 0:
 pool = multiprocessing.Pool(processes=num_workers)
 map_args = zip(file_urls, file_paths)
 results = pool.map(download_image, map_args)
-
-f = open(args.image_urls_save_to, 'wb')
-for u in file_urls:
-    f.write(u + '\n')
-f.close()
