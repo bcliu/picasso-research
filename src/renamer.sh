@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 for name in vggpool3*
 do
     newname="$(echo "$name" | cut -c10-)"

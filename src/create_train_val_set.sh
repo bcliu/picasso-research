@@ -16,11 +16,15 @@ if [ $# -eq 5 ]; then
 elif [ $# -eq 3 ]; then
     IMAGENET_TRAIN_PATH=$1
     IMAGENET_TRAIN_FILELIST=$2
-    FACE_CLASS_PATH=$5
+    FACE_CLASS_PATH=$3
 else
     echo "Unrecognized number of arguments"
     exit 1
 fi
+
+echo "Imagenet training images path: $IMAGENET_TRAIN_PATH"
+echo "Imagenet training images list path: $IMAGENET_TRAIN_FILELIST"
+echo "Face images path: $FACE_CLASS_PATH"
 
 MASK_CLASS=643
 

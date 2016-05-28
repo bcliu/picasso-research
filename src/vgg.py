@@ -86,11 +86,6 @@ if mode == 'cpu':
 else:
     caffe.set_mode_gpu()
 
-#transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
-#transformer.set_transpose('data', (2,0,1))
-#transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1)) # mean pixel
-#transformer.set_raw_scale('data', 255)
-#transformer.set_channel_swap('data', (2,1,0))
 net = caffe.Classifier(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
         caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
         mean=np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1),
@@ -166,7 +161,6 @@ else:
                         vectors.append(response[:, y, x].copy())
                         vec_origin_file.append(path)
                         vec_location.append((x, y))
-
 
     print 'Got', len(vectors), 'vectors randomly sampled'
     # Load the images of which only the center patches will be used
@@ -280,6 +274,7 @@ def get_sparsity(data):
     S = (1 - A) / (1 - 1/n)
     return A, S
 
+
 def get_activations_of_cluster(cluster_i):
     count = 0
     bigsum = None
@@ -292,6 +287,7 @@ def get_activations_of_cluster(cluster_i):
             count = count + 1.0
 
     return bigsum, count
+
 
 def plot_raw_activation(cluster_i):
     totalsum, count = get_activations_of_cluster(cluster_i)
@@ -370,7 +366,7 @@ def plot_activation(cluster_i, top_n=4):
     ax = plt.subplot2grid(grid_dims, (0, 0), colspan=7, rowspan=8)
 
     bigsum, count = get_activations_of_cluster(cluster_i)
-    bigsum = bigsum / count
+    bigsum /= count
 
     # Get sorted indexes
     sorted_indexes = [i[0] for i in sorted(enumerate(bigsum), key=lambda x:x[1], reverse=True)]
@@ -390,17 +386,17 @@ def plot_activation(cluster_i, top_n=4):
 
         plt.annotate(
             'Neuron #' + str(top_indexes[i]) + '\navg: ' + str(top_responses[i]),
-            xy = (i, bigsum[i]), xytext = (100 + 20 * i, -50 - 20 * i),
-            textcoords = 'offset points', ha = 'right', va = 'bottom',
-            bbox = dict(boxstyle = 'round,pad=0.5', fc = 'yellow', alpha = 0.5),
-            arrowprops = dict(arrowstyle = '->', connectionstyle = 'arc3,rad=0'))
+            xy=(i, bigsum[i]), xytext=(100 + 20 * i, -50 - 20 * i),
+            textcoords='offset points', ha='right', va='bottom',
+            bbox = dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
+            arrowprops = dict(arrowstyle='->', connectionstyle='arc3,rad=0'))
 
     # Print sparsity metric
     A, S = get_sparsity(bigsum)
     plt.annotate(
         'Sparsity: S=' + str(S),
-        xy = (0.9, 0.9), xytext = (0.9, 0.9),
-        textcoords = 'axes fraction', ha = 'right', va = 'bottom')
+        xy=(0.9, 0.9), xytext = (0.9, 0.9),
+        textcoords='axes fraction', ha = 'right', va = 'bottom')
 
     # Rightmost column patch plot
     print 'Looking for vectors closest to the cluster center...'
