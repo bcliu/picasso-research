@@ -5,6 +5,25 @@ layer {
   top: "data"
   top: "label"
   include {
+    phase: TRAIN
+  }
+  transform_param {
+    mirror: true
+    crop_size: 227
+    mean_file: "/home/chenl/software/caffe-rc3/data/ilsvrc12/imagenet_mean.binaryproto"
+  }
+  data_param {
+    source: "/home/chenl/drive/flickr/flickr_40k_lmdb"
+    batch_size: 256
+    backend: LMDB
+  }
+}
+layer {
+  name: "data"
+  type: "Data"
+  top: "data"
+  top: "label"
+  include {
     phase: TEST
   }
   transform_param {
@@ -13,7 +32,7 @@ layer {
     mean_file: "/home/chenl/software/caffe-rc3/data/ilsvrc12/imagenet_mean.binaryproto"
   }
   data_param {
-    source: "/home/chenl/drive/labeled_faces_in_wild/lfw5k/lfw_train_5k_conv32_5px_lmdb"
+    source: "/home/chenl/drive/ilsvrc/ilsvrc_val_test_lmdb"
     batch_size: 50
     backend: LMDB
   }
@@ -24,11 +43,11 @@ layer {
   bottom: "data"
   top: "conv1"
   param {
-    lr_mult: 1
+    lr_mult: 0
     decay_mult: 1
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -79,11 +98,11 @@ layer {
   bottom: "norm1"
   top: "conv2"
   param {
-    lr_mult: 1
+    lr_mult: 0
     decay_mult: 1
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {
@@ -135,11 +154,11 @@ layer {
   bottom: "norm2"
   top: "conv3"
   param {
-    lr_mult: 1
+    lr_mult: 0
     decay_mult: 1
   }
   param {
-    lr_mult: 2
+    lr_mult: 0
     decay_mult: 0
   }
   convolution_param {

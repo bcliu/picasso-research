@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-for name in vggpool3*
+cd /home/chenl/drive/flickr/flickr_40k
+for name in portrait*
 do
-    newname="$(echo "$name" | cut -c10-)"
+    newname="n$name"
     echo Old name: $name, new name: $newname
     mv "$name" "$newname"
 done

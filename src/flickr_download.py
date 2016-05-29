@@ -6,6 +6,7 @@ import multiprocessing
 from skimage import io
 import argparse
 import time
+import datetime
 
 
 class Colors:
@@ -42,7 +43,7 @@ file_urls = set()
 file_paths = []
 previous_urls_obtained = 0
 max_taken_date = int(time.time())
-date_range = 20000000
+date_range = 10000000
 
 save_to_dir = os.path.abspath(args.save_to)
 if not os.path.exists(save_to_dir):
@@ -85,7 +86,9 @@ while len(file_urls) < args.num_requested:
     if len(file_urls) == previous_urls_obtained:
         print '\n' + Colors.FAIL + 'No new images obtained in new request. Changing taken dates...' + Colors.ENDC
         max_taken_date -= date_range + 1
-        print Colors.FAIL + 'Max taken date changed to ' + str(max_taken_date) + Colors.ENDC
+        print (Colors.FAIL + 'Max taken date changed to ' + str(max_taken_date) + ' (' +
+            datetime.datetime.fromtimestamp(max_taken_date).strftime('%Y-%m-%d %H:%M:%S') +
+            ')' + Colors.ENDC)
         current_page = 0
 
     previous_urls_obtained = len(file_urls)
