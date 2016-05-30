@@ -1,6 +1,8 @@
-import Image
+from PIL import Image
 import argparse
 from os import walk
+import sys
+import os
 
 parser = argparse.ArgumentParser(description='Shrink image sizes with white padding')
 parser.add_argument('load_from_path')
@@ -13,9 +15,13 @@ parser.add_argument('--smoothedge', action='store_true', required=False)
 
 args = parser.parse_args()
 
+if not os.path.exists(args.save_to_path):
+    os.makedirs(args.save_to_path)
+
 for (dirpath, dirnames, filenames) in walk(args.load_from_path):
     for filename in filenames:
-        old_im = Image.open(dirpath + "/" + filename)
+        path = os.path.abspath(os.path.join(dirpath, filename))
+        old_im = Image.open(path)
 
         whole_img_dim = int(args.output_dim)
         new_size = (whole_img_dim, whole_img_dim)
@@ -65,7 +71,11 @@ for (dirpath, dirnames, filenames) in walk(args.load_from_path):
                     pixels[right_x, y] = pixels[right_x, y][:3] + (new_alpha2, )
 
         new_im.paste(old_im, ((new_size[0]-old_width)/2,
-                              (new_size[1]-old_height)/2),
-                     mask=old_im.split()[3])
+                              (new_size[1]-old_height)/2))
 
         new_im.save(args.save_to_path + "/" + filename)
+        
+        sys.stdout.write("\x1b[2K\rProcessed: %s" % path)
+        sys.stdout.flush()
+
+print '\n'
