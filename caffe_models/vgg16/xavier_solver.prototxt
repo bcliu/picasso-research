@@ -1,0 +1,14 @@
+net: "/home/chenl/research/caffe_models/vgg16/xavier_train_val.prototxt"
+test_iter: 10
+test_interval: 100
+base_lr: 0.0005
+lr_policy: "step"
+gamma: 0.001
+stepsize: 1000
+display: 10
+max_iter: 50000
+momentum: 0.9
+weight_decay: 0.0005
+snapshot: 3000
+snapshot_prefix: "vgg16_snap"
+solver_mode: GPU
