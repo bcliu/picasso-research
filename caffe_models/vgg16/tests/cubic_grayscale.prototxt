@@ -3,27 +3,6 @@ layer {
   name: "data"
   type: "Data"
   include {
-    phase: TRAIN
-  }
- transform_param {
-    crop_size: 224
-    mean_value: 104
-    mean_value: 117
-    mean_value: 123
-    mirror: true
- }
- data_param {
-    source: "/home/chenl/drive/flickr_and_lfw_with_ilsvrc_lmdb"
-    batch_size: 64
-    backend: LMDB
-  }
-  top: "data"
-  top: "label"
-}
-layer {
-  name: "data"
-  type: "Data"
-  include {
     phase: TEST
   }
  transform_param {
@@ -34,8 +13,8 @@ layer {
     mirror: false
  }
  data_param {
-    source: "/home/chenl/drive/ilsvrc/ilsvrc_val_test_lmdb"
-    batch_size: 32
+    source: "/home/chenl/drive/cubic_grayscale_lmdb"
+    batch_size: 16
     backend: LMDB
   }
   top: "data"

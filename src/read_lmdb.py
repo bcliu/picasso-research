@@ -28,7 +28,7 @@ for key, value in lmdb_cursor:
     data = caffe.io.datum_to_array(datum)
     im = data.astype(np.uint8)
     im = np.transpose(im, (1, 2, 0))  # original (dim, col, row)
-    print "label ", label
+    print "label ", label, 'shape:', im.shape
 
     if cycle == args.show_one_every:
         cycle = 0

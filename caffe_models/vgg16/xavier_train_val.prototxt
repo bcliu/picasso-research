@@ -58,6 +58,12 @@ layer {
       value: 0.0
     }
   }
+  param {
+    lr_mult: 0
+  }
+  param {
+    lr_mult: 0
+  }
 }
 layer {
   name: "relu1_1"
