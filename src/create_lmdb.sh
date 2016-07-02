@@ -24,8 +24,9 @@ fi
 # already been resized using another tool.
 RESIZE=true
 if $RESIZE; then
-  RESIZE_HEIGHT=227
-  RESIZE_WIDTH=227
+  # WARNING!! DIFFERENCE BETWEEN 227 (input size of alexnet), 224 (input size of vgg) AND 256!!
+  RESIZE_HEIGHT=256
+  RESIZE_WIDTH=256
 else
   RESIZE_HEIGHT=0
   RESIZE_WIDTH=0

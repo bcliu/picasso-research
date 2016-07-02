@@ -13,7 +13,7 @@ layer {
     mean_file: "/home/chenl/software/caffe-rc3/data/ilsvrc12/imagenet_mean.binaryproto"
   }
   data_param {
-    source: "/home/chenl/drive/flickr/flickr_40k_lmdb"
+    source: "/home/chenl/drive/flickr_and_lfw_with_ilsvrc_lmdb"
     batch_size: 256
     backend: LMDB
   }

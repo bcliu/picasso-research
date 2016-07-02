@@ -1,4 +1,4 @@
-net: "/home/chenl/software/caffe-rc3/models/bvlc_reference_caffenet/fixed_conv3_train_val.prototxt.prototxt"
+net: "/home/chenl/software/caffe-rc3/models/bvlc_reference_caffenet/fixed_conv3_train_val.prototxt"
 test_iter: 100
 test_interval: 1000
 base_lr: 0.001
@@ -10,5 +10,5 @@ max_iter: 100000
 momentum: 0.9
 weight_decay: 0.0005
 snapshot: 10000
-snapshot_prefix: "/home/chenl/software/caffe-rc3/models/bvlc_reference_caffenet/f_40k_snap"
+snapshot_prefix: "/home/chenl/software/caffe-rc3/models/bvlc_reference_caffenet/f_l_fixed_conv3_snap"
 solver_mode: GPU

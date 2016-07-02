@@ -11,9 +11,12 @@ layer {
     mirror: true
     crop_size: 227
     mean_file: "/home/chenl/software/caffe-rc3/data/ilsvrc12/imagenet_mean.binaryproto"
+    #mean_value: 104
+    #mean_value: 117
+    #mean_value: 123
   }
   data_param {
-    source: "/home/chenl/drive/flickr/flickr_40k_with_ilsvrc_lmdb"
+    source: "/home/chenl/drive/flickr/flickr_40k_conv32_5px_256x256_with_ilsvrc_lmdb"
     batch_size: 256
     backend: LMDB
   }

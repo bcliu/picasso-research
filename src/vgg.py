@@ -7,7 +7,7 @@ import os
 
 import matplotlib
 
-parser = argparse.ArgumentParser(description='')
+parser = argparse.ArgumentParser()
 parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/', required=False)
 parser.add_argument('--layer', default='conv4_1', required=False)
 parser.add_argument('--sample_fraction', default=0.3, required=False)
@@ -58,13 +58,8 @@ import caffe
 
 # Find better way to write it to distribute more evenly
 def sample(width, height, number):
-    mat = [[False for x in range(width)] for x in range(width)]
     prob_true = number * 1.0 / width / height
-    for x in range(width):
-        for y in range(height):
-            mat[y][x] = True if np.random.random() < prob_true else False
-
-    return mat
+    return np.random.rand(height, width) < prob_true
 
 # Force non-interative mode, if saving plots
 if args.save_plots_to is not None:
@@ -136,6 +131,8 @@ if args.load_layer_dump_from is not None:
     print 'Finished loading dump.'
 else:
     # Loop through every image in the given directory
+    # TODO: THIS CAN BE PARALLELIZED, BY BATCH LOADING! TRY THAT
+    # BUT PROBABLY THAT IS NOT THE BOTTLENECK...
     for (dirpath, dirnames, filenames) in walk(args.images):
         for filename in filenames:
             path = os.path.abspath(os.path.join(dirpath, filename))
@@ -154,6 +151,7 @@ else:
                 sample_mask = sample(width_response, height_response,
                         float(args.sample_fraction) * width_response * height_response)
 
+            # TODO: this could be parallelized by multiplication -- then filtering out 0 columns
             for y in range(height_response):
                 for x in range(width_response):
                     if sample_mask[y][x]:
