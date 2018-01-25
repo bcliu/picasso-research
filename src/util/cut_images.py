@@ -1,5 +1,9 @@
+"""
+Crop out all 100x100 blocks from 224x224 images, and put each block in a new 224x224 with white background.
+Optionally you can choose to only crop out the block at the center of the image to reduce the number of
+newly generated images.
+"""
 from PIL import Image
-import Image
 import argparse
 from os import walk
 import os

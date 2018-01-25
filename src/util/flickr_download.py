@@ -1,3 +1,6 @@
+"""Flickr images downloader.
+Downloads Flickr images with a given query string.
+"""
 import os
 import sys
 import urllib
@@ -18,6 +21,7 @@ class Colors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
 
 SORT_BY_OPTIONS = ['interestingness-desc', 'relevance', 'date-taken-desc']
 DOWNLOAD_URL_KEY = 'url_l'
@@ -108,6 +112,7 @@ def download_image(args_tuple):
         raise Exception()  # multiprocessing doesn't catch keyboard exceptions
     except:
         return False
+
 
 print 'Downloading...'
 num_workers = 16

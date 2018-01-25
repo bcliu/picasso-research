@@ -1,5 +1,10 @@
-# Remove file names in image list with a certain class
+"""Remove file names in image list with a certain class.
+Each line in the input file is in the format of
 
+    image_path image_label
+
+Only images not of the specified label parameter will be saved to the output file.
+"""
 import argparse
 
 parser = argparse.ArgumentParser(description='')
