@@ -1,7 +1,6 @@
 .idea/
-src/constants.m
-src/constants.py
-references/visualize_dl-master/constants.py
+env.py
+env.m
 *~
 *.log
 *.so

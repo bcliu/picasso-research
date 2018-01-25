@@ -1,10 +1,7 @@
-from constants import *
+from env.env import *
 import argparse
-from os import walk
-import os, sys, math, pickle, matplotlib
+import sys, pickle, matplotlib
 import numpy as np
-
-import get_receptive_field as rf
 
 matplotlib.use('Agg') # For saving images to file
 

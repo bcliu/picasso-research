@@ -1,7 +1,7 @@
 # Plot response curve in fc8 and prob layers of a certain neuron. Takes two types of images
 # e.g. face/non-face images
 
-from constants import *
+from env.env import *
 import argparse
 from os import walk
 import os

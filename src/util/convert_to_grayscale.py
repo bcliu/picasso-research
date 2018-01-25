@@ -1,3 +1,6 @@
+"""Grayscale image converter.
+Converts all images in a given input directory to grayscale, and save them to an output directory.
+"""
 import argparse
 from os import walk
 import os

@@ -1,6 +1,6 @@
 # TODO kmeans score is different from distance, but orders are the same -- objective function is ^2 of distance
 
-from constants import *
+from env.env import *
 import argparse
 from os import walk
 import os
@@ -35,19 +35,15 @@ if args.save_plots_to is not None:
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-import matplotlib.gridspec as gridspec
-from matplotlib.offsetbox import TextArea, DrawingArea, OffsetImage, AnnotationBbox
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 import math
 import numpy as np
 import pickle
 
-from sklearn import metrics
 from sklearn.cluster import KMeans
-from sklearn.datasets import load_digits
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FastICA
-from sklearn.preprocessing import scale
 from sklearn.manifold import TSNE
 import sklearn.datasets
 

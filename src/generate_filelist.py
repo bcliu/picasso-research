@@ -1,8 +1,9 @@
+"""File list with labels generator.
+Generates a file list containing images in a given directory, with all the same given label.
+"""
 import argparse
 import os
 from os import walk
-
-# Generate a file list containing images in a given directory, with all the same given label
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input_dir', required=True)

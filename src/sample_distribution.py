@@ -1,18 +1,13 @@
 # Idea: take a few images (e.g. 50). Based on the distribution of eyes neural response in the high dimensional space,
 # randomly sample new responses in the hypercolumn (or neighboring hypercolumns) to generate new images
 
-from constants import *
+from env.env import *
 import argparse
-import sys
 import os
 from os import walk
 import caffe
 from sklearn.cluster import KMeans
-from sklearn.cluster import DBSCAN
-from sklearn.decomposition import PCA
-from sklearn.decomposition import FastICA
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import get_receptive_field as rf
 

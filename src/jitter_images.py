@@ -16,7 +16,7 @@
 # TODO: suppress overlapping regions in merged regions. Ask both sides to retreat a little so that no overlaps
 # TODO: how to make movement even smoother: move a couple pixels at a time!!
 # TODO: try use neurons instead of clusters
-from constants import *
+from env.env import *
 import argparse
 from os import walk
 import os, sys, math, pickle, matplotlib
