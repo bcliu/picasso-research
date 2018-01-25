@@ -31,7 +31,6 @@ import time
 # Set Caffe output level to Warnings
 os.environ['GLOG_minloglevel'] = '2'
 
-sys.path.insert(0, caffe_root + 'python')
 import caffe
 if mode == 'cpu':
     caffe.set_mode_cpu()
