@@ -20,7 +20,8 @@ parser.add_argument('--dump', help='dump variables to files for fast loading', a
 parser.add_argument('--dumppath', help='path to save dump file', default='svm2c-data.dump', required=False)
 parser.add_argument('--loaddump', help='load dumped variables', action='store_true')
 
-parser.add_argument('--layer', help='which layer in AlexNet to use for training and classification', default='pool5', required=False)
+parser.add_argument('--layer', help='which layer in AlexNet to use for training and classification', default='pool5',
+                    required=False)
 # Default value means take the entire kernel
 parser.add_argument('--kernelsize',
                     help='what square size to take from the center of kernel to use for training and classification',

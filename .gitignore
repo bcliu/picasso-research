@@ -11,3 +11,4 @@ env.m
 *.out
 *.caffemodel
 *.solverstate
+.ipynb_checkpoints/
