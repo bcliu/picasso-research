@@ -1,15 +1,16 @@
 """Flickr images downloader.
 Downloads Flickr images with a given query string.
 """
-import os
-import sys
-import urllib
+import argparse
+import datetime
 import json
 import multiprocessing
-from skimage import io
-import argparse
+import os
+import sys
 import time
-import datetime
+import urllib
+
+from skimage import io
 
 
 class Colors:

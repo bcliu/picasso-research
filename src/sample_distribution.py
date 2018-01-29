@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.cluster import KMeans
 
-import get_receptive_field as rf
+from util import get_receptive_field as rf
 from env.env import *
 
 os.environ['GLOG_minloglevel'] = '2'

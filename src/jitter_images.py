@@ -23,7 +23,7 @@ import caffe
 import numpy as np
 from PIL import Image
 
-import get_receptive_field as rf
+from util import get_receptive_field as rf
 from env.env import *
 
 # Set Caffe output level to Warnings
@@ -326,6 +326,7 @@ def jitter_regions(im, regions, radius):
 
     return jittered
 
+
 clusters = []
 for c in args.clusters:
     clusters.append(int(c))
@@ -422,6 +423,7 @@ def jitter_images():
                 rescaled = (255.0 / jittered.max() * (jittered - jittered.min())).astype(np.uint8)
                 jittered_im = Image.fromarray(rescaled)
                 jittered_im.save(save_path)
+
 
 start = time.time()
 jitter_images()

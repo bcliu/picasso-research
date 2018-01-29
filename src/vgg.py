@@ -14,7 +14,7 @@ from sklearn.decomposition import FastICA
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 
-import get_receptive_field as rf
+from util import get_receptive_field as rf
 from env.env import *
 
 caffe.set_mode_gpu()
@@ -328,8 +328,10 @@ def get_top_in_clusters(clusters_i):
     return out
 
 
-# Do MDS on cluster centers, plot on 2D
 def plot_clusters_embedding():
+    """
+    Do MDS on cluster centers, plot on 2D
+    """
     ax = plt.gca()
     _, centers_2d = do_tsne(kmeans_obj.cluster_centers_)
     plt.scatter(centers_2d[:, 0], centers_2d[:, 1])
@@ -406,8 +408,10 @@ def plot_activation(cluster_i, top_n=4):
     plt.show()
 
 
-# Plot response of neuron_i on all patches in vectors array
 def plot_stimuli_response(neuron_i, inputs=vectors, top_n=10):
+    """
+    Plot response of neuron_i on all patches in vectors array
+    """
     grid_dims = (top_n, top_n)
     ax = plt.subplot2grid(grid_dims, (0, 0), colspan=top_n-1, rowspan=top_n)
 
@@ -530,10 +534,12 @@ def dye_image_with_neuron_response(path, neuron_i):
     pass
 
 
-## distance_threshold: require a vector to be smaller than distance of distance_threshold * num of vectors in cluster
-##                     for it to be considered as in this cluster
-## NOTE: CHECK THIS PART OF THRESHOLDING, TESTING
 def find_patches_in_cluster(cluster_i, image_path, dist_thres_percentage=1.0):
+    """
+    :param dist_thres_percentage: require a vector to be smaller than distance of distance_threshold * num of vectors
+                                  in cluster for it to be considered as in this cluster
+    TODO: CHECK THIS PART OF THRESHOLDING, TESTING
+    """
     score_thres = 0.0
     cluster_scores = get_top_n_in_cluster(cluster_i, -1) # All score values in this cluster
     cluster_scores = [score for (vec_id, score) in cluster_scores]
