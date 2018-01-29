@@ -1,17 +1,21 @@
-# Idea: take a few images (e.g. 50). Based on the distribution of eyes neural response in the high dimensional space,
-# randomly sample new responses in the hypercolumn (or neighboring hypercolumns) to generate new images
-
-from env.env import *
+"""
+Idea: take a few images (e.g. 50). Based on the distribution of eyes neural response in the high dimensional space,
+randomly sample new responses in the hypercolumn (or neighboring hypercolumns) to generate new images
+"""
 import argparse
 import os
 from os import walk
+
 import caffe
-from sklearn.cluster import KMeans
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.cluster import KMeans
+
 import get_receptive_field as rf
+from env.env import *
 
 os.environ['GLOG_minloglevel'] = '2'
+caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--images', '-i', required=True)
@@ -20,7 +24,6 @@ parser.add_argument('--sample_fraction', '-f', default=1.0, type=float)
 parser.add_argument('--n_clusters', '-n', default=32, type=int)
 args = parser.parse_args()
 
-caffe.set_mode_gpu()
 
 # TODO: how about feeding some eye-only patches again?
 

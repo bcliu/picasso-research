@@ -1,15 +1,18 @@
-# Plot response curve in fc8 and prob layers of a certain neuron. Takes two types of images
-# e.g. face/non-face images
-
-from env.env import *
+"""
+Plot response curve in fc8 and prob layers of a certain neuron. Takes two types of images
+e.g. face/non-face images
+"""
 import argparse
-from os import walk
 import os
+import pickle
 import sys
+from os import walk
+
+import caffe
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle
-import caffe
+
+from env.env import *
 
 # Set Caffe output level to Warnings
 os.environ['GLOG_minloglevel'] = '2'

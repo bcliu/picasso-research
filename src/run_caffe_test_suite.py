@@ -1,7 +1,7 @@
 import argparse
+import os
 import subprocess
 from os import walk
-import os
 
 
 class Colors:

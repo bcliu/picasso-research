@@ -73,11 +73,15 @@ for i in range(len(layers) - 1):
     prev_layers[layers[i+1]] = layers[i]
 
 
-# Returns: top-left corner x, y, and bottom-right corner x, y
-# x is the column of the neuron in the 2D array representing the filter response
-# y is the row
-# NOTE: THERE COULD BE PROBLEM HERE. DOUBLE CHECK
 def get_conv_neuron_rec_field(layer, neuron_x, neuron_y):
+    """
+    :param layer: layer to get
+    :param neuron_x: column of the neuron in the 2D array representing the filter response
+    :param neuron_y: row
+    :return: top-left corner x, y, and bottom-right corner x, y
+
+    TODO: THERE COULD BE PROBLEM HERE. DOUBLE CHECK
+    """
     last_layer_top_left = [-1, -1]
     last_layer_bottom_right = [-1, -1]
 

@@ -2,14 +2,16 @@
 Sort images (by assigning new filenames) by the activation of a specific neuron in fc8 layer
 or prob layer (containing 1000 classes)
 """
-from env.env import *
 import argparse
 import os
+import shutil
 import sys
 from os import walk
-import numpy as np
-import shutil
+
 import caffe
+import numpy as np
+
+from env.env import *
 
 os.environ['GLOG_minloglevel'] = '2'
 caffe.set_mode_gpu()

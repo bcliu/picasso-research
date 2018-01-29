@@ -1,9 +1,10 @@
+import argparse
+
 import caffe
 import lmdb
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from caffe.proto import caffe_pb2
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--lmdb', required=True)

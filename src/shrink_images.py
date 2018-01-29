@@ -1,8 +1,9 @@
-from PIL import Image
 import argparse
-from os import walk
-import sys
 import os
+import sys
+from os import walk
+
+from PIL import Image
 
 parser = argparse.ArgumentParser(description='Shrink image sizes with white padding')
 parser.add_argument('load_from_path')

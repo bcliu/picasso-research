@@ -15,6 +15,8 @@ from sklearn import svm
 
 from env.env import *
 
+caffe.set_mode_gpu()
+
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--type1', default=research_root + 'images/eyes/normal/sm/', required=False)
 parser.add_argument('--type2', default=research_root + 'images/noses/normal/sm/', required=False)
@@ -30,7 +32,6 @@ plt.rcParams['figure.figsize'] = (10, 10)
 plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
 
-caffe.set_mode_gpu()
 net = caffe.Net(
     original_models_root + 'bvlc_reference_caffenet/deploy.prototxt',
     original_models_root + 'bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel',

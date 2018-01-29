@@ -1,23 +1,30 @@
-# Steps:
-# 1. Specify image input and output paths
-# 2. Specify which neurons activation considered useful for jittering. Specify thresholds if necessary
-#           Two options: either rely on clusters, or rely on neurons
-# 3. Merge regions, ignore boundaries, to form a region for jittering
-# 4. Randomly move regions based on given radius, while avoiding collision
-# 5. Smooth out boundaries
-
-from env.env import *
+"""
+Steps:
+1. Specify image input and output paths
+2. Specify which neurons activation considered useful for jittering. Specify thresholds if necessary
+          Two options: either rely on clusters, or rely on neurons
+3. Merge regions, ignore boundaries, to form a region for jittering
+4. Randomly move regions based on given radius, while avoiding collision
+5. Smooth out boundaries
+"""
 import argparse
-from os import walk
-import os, sys, math, pickle, matplotlib
-import numpy as np
-import get_receptive_field as rf
-import random
-from Queue import Queue
-from PIL import Image
 import fnmatch
+import math
+import matplotlib
+import os
+import pickle
+import random
+import sys
 import time
+from Queue import Queue
+from os import walk
+
 import caffe
+import numpy as np
+from PIL import Image
+
+import get_receptive_field as rf
+from env.env import *
 
 # Set Caffe output level to Warnings
 os.environ['GLOG_minloglevel'] = '2'
@@ -31,9 +38,10 @@ parser.add_argument('-cd', '--clusters_dump', required=True)
 parser.add_argument('-c', '--clusters', nargs='+', required=True)
 parser.add_argument('-r', '--radius', required=True, help='Jitter radius')
 parser.add_argument('-ct', '--cluster_threshold', required=False, default=0.6, help='Cluster distance threshold (0-1)')
-parser.add_argument('-ot', '--overlap_threshold', required=False, default=0.6, help='Overlap threshold for equality of boxes')
+parser.add_argument('-ot', '--overlap_threshold', required=False, default=0.6,
+                    help='Overlap threshold for equality of boxes')
 parser.add_argument('--interactive', action='store_true', default=False, required=False,
-    help='Show which parts are jittered in a screen instead of saving')
+                    help='Show which parts are jittered in a screen instead of saving')
 parser.add_argument('-bb', '--show_bounding_box', action='store_true', default=False, required=False,
                     help='Show or save detected bounding boxes')
 parser.add_argument('--filename_filter', required=False, default=None, help='Controls which files are considered')

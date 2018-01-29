@@ -17,6 +17,8 @@ from sklearn.manifold import TSNE
 import get_receptive_field as rf
 from env.env import *
 
+caffe.set_mode_gpu()
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/', required=False)
 parser.add_argument('--layer', default='conv4_1', required=False)
@@ -65,8 +67,6 @@ print 'Sampling ' + str(args.sample_fraction) + ' of responses from layer ' + ar
 
 imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
-
-caffe.set_mode_gpu()
 
 net = caffe.Classifier(
     original_models_root + 'vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',

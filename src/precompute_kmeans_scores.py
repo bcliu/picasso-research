@@ -1,13 +1,15 @@
-from env.env import *
 import argparse
-import sys
 import pickle
+import sys
+
+import caffe
 import matplotlib
 import numpy as np
-import caffe
 
-matplotlib.use('Agg')  # For saving images to file
+from env.env import *
+
 caffe.set_mode_gpu()
+matplotlib.use('Agg')  # For saving images to file
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('-ld', '--layer_dump', required=True)
