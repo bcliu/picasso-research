@@ -18,37 +18,33 @@ parser.add_argument('--images', '-i', required=True)
 parser.add_argument('--layer', '-l', default='conv3_3')
 parser.add_argument('--sample_fraction', '-f', default=1.0, type=float)
 parser.add_argument('--n_clusters', '-n', default=32, type=int)
+args = parser.parse_args()
+
+caffe.set_mode_gpu()
 
 # TODO: how about feeding some eye-only patches again?
-
-parser.add_argument('--gpu', type=int, default=0)
-
-args = parser.parse_args()
 
 
 def sample(width, height, number):
     prob_true = number * 1.0 / width / height
     return np.random.rand(height, width) < prob_true
 
-caffe.set_device(args.gpu)
-if mode == 'cpu':
-    caffe.set_mode_cpu()
-else:
-    caffe.set_mode_gpu()
 
 print 'Loading VGG model...'
-net = caffe.Classifier(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
-                       caffe_root + 'models/vgg16/vgg16_models/flickr_40k_iter_21000.caffemodel',
-                       mean=np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1),
-                       channel_swap=(2, 1, 0),
-                       raw_scale=255,
-                       image_dims=(224, 224))
+net = caffe.Classifier(
+    original_models_root + 'vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
+    trained_models_root + 'vgg16_models/flickr_40k_iter_21000.caffemodel',
+    mean=np.load(ilsvrc_mean_file_path).mean(1).mean(1),
+    channel_swap=(2, 1, 0),
+    raw_scale=255,
+    image_dims=(224, 224))
 
 net.blobs['data'].reshape(1, 3, 224, 224)
 
 
-def load_image(path):
-    net.predict([caffe.io.load_image(path)], oversample=False)
+def load_image(image_path):
+    net.predict([caffe.io.load_image(image_path)], oversample=False)
+
 
 sample_mask = None
 vectors = []
@@ -96,7 +92,7 @@ def get_original_patch_of_vec(vec_id):
     rec_field = rf.get_receptive_field(args.layer, this_vec_location[0], this_vec_location[1])
     load_image(vec_origin_file[vec_id])
     im = net.transformer.deprocess('data',
-        net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)])
+                                   net.blobs['data'].data[0][:, rec_field[1]:(rec_field[3]+1), rec_field[0]:(rec_field[2]+1)])
     return im
 
 
@@ -132,9 +128,3 @@ def view_n_from_clusters(from_cluster, to_cluster, n_each, save_plots=False):
         plt.savefig(os.path.join(args.save_plots_to, args.layer + '_' + 'clusters' + str(from_cluster) + 'to' + str(to_cluster) + '.png'))
     else:
         plt.show()
-
-
-# Cluster #29 in "-i ~/drive/flickr/flickr_50 -l conv3_3 -n 96 -f 0.5"
-# Inspect these two caffemodels, see how the cluster distances change etc.. How to evaluate goodness of clusters?
-# Also: try on LFW, uniform scale may help
-# Similar patches close to one eye in the same image should ideally go to the same cluster!! instead of many different ones!!

@@ -1,16 +1,13 @@
 from env.env import *
 import argparse
-import sys, pickle, matplotlib
+import sys
+import pickle
+import matplotlib
 import numpy as np
-
-matplotlib.use('Agg') # For saving images to file
-
-sys.path.insert(0, caffe_root + 'python')
 import caffe
-if mode == 'cpu':
-    caffe.set_mode_cpu()
-else:
-    caffe.set_mode_gpu()
+
+matplotlib.use('Agg')  # For saving images to file
+caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('-ld', '--layer_dump', required=True)
@@ -18,13 +15,14 @@ parser.add_argument('-cd', '--clusters_dump', required=True)
 parser.add_argument('-o', '--output_dump', required=True)
 args = parser.parse_args()
 
-net = caffe.Classifier(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
-        caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
-        mean=np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1),
-        channel_swap=(2, 1, 0),
-        raw_scale=255,
-        image_dims=(224, 224))
-net.blobs['data'].reshape(1, 3, 224, 224) #??? necessary?
+net = caffe.Classifier(
+    original_models_root + 'vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
+    original_models_root + 'vgg16/VGG_ILSVRC_16_layers.caffemodel',
+    mean=np.load(ilsvrc_mean_file_path).mean(1).mean(1),
+    channel_swap=(2, 1, 0),
+    raw_scale=255,
+    image_dims=(224, 224))
+net.blobs['data'].reshape(1, 3, 224, 224)
 
 print 'Loading layer dump file from', args.layer_dump
 f = open(args.layer_dump)

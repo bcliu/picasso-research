@@ -1,6 +1,7 @@
-# Sort images (by assigning new filenames) by the activation of a specific neuron in fc8 layer
-# or prob layer (containing 1000 classes)
-
+"""
+Sort images (by assigning new filenames) by the activation of a specific neuron in fc8 layer
+or prob layer (containing 1000 classes)
+"""
 from env.env import *
 import argparse
 import os
@@ -8,15 +9,10 @@ import sys
 from os import walk
 import numpy as np
 import shutil
+import caffe
 
 os.environ['GLOG_minloglevel'] = '2'
-
-sys.path.insert(0, caffe_root + 'python')
-import caffe
-if mode == 'cpu':
-    caffe.set_mode_cpu()
-else:
-    caffe.set_mode_gpu()
+caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--images_dir', required=True)
@@ -29,12 +25,13 @@ args = parser.parse_args()
 if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
 
-net = caffe.Classifier(caffe_root + 'models/bvlc_reference_caffenet/deploy.prototxt',
-                       os.path.abspath(args.alexnet_model),
-                       mean=np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1),
-                       channel_swap=(2, 1, 0),
-                       raw_scale=255,
-                       image_dims=(227, 227))
+net = caffe.Classifier(
+    original_models_root + 'bvlc_reference_caffenet/deploy.prototxt',
+    os.path.abspath(args.alexnet_model),
+    mean=np.load(ilsvrc_mean_file_path).mean(1).mean(1),
+    channel_swap=(2, 1, 0),
+    raw_scale=255,
+    image_dims=(227, 227))
 
 net.blobs['data'].reshape(1, 3, 227, 227)
 
@@ -42,8 +39,9 @@ net.blobs['data'].reshape(1, 3, 227, 227)
 images_vals = []
 
 
-def load_image(path):
-    net.predict([caffe.io.load_image(path)], oversample=False)
+def load_image(image_path):
+    net.predict([caffe.io.load_image(image_path)], oversample=False)
+
 
 for (dirpath, dirnames, filenames) in walk(os.path.abspath(args.images_dir)):
     for filename in filenames:

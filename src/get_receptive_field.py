@@ -1,3 +1,7 @@
+"""
+Returns region of receptive field given a specified location of a neuron on a certain
+layer.
+"""
 # Layers and parameters of VGG16
 layers = [
     'data',
@@ -176,6 +180,7 @@ def main():
     args = parser.parse_args()
 
     print get_receptive_field(args.layer, int(args.x), int(args.y), True)
+
 
 if __name__ == "__main__":
     main()

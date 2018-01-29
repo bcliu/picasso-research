@@ -1,11 +1,21 @@
-# TODO kmeans score is different from distance, but orders are the same -- objective function is ^2 of distance
-
-from env.env import *
 import argparse
-from os import walk
+import math
 import os
+import pickle
+from os import walk
 
+import caffe
 import matplotlib
+import numpy as np
+import skimage
+import sklearn.datasets
+from sklearn.cluster import KMeans
+from sklearn.decomposition import FastICA
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+
+import get_receptive_field as rf
+from env.env import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/', required=False)
@@ -15,8 +25,6 @@ parser.add_argument('--n_clusters', default=32, required=False)
 
 parser.add_argument('--center_only_path', default=None, required=False)
 parser.add_argument('--center_only_neuron_x', default=None, required=False)
-
-parser.add_argument('--gpu', default=0, required=False)
 
 parser.add_argument('--load_layer_dump_from', default=None, required=False)
 parser.add_argument('--load_classification_dump_from', default=None, required=False)
@@ -37,25 +45,12 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-import math
-import numpy as np
-import pickle
-
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-from sklearn.decomposition import FastICA
-from sklearn.manifold import TSNE
-import sklearn.datasets
-
-import skimage
-
-import get_receptive_field as rf
-import caffe
 
 # Find better way to write it to distribute more evenly
 def sample(width, height, number):
     prob_true = number * 1.0 / width / height
     return np.random.rand(height, width) < prob_true
+
 
 # Force non-interative mode, if saving plots
 if args.save_plots_to is not None:
@@ -71,21 +66,18 @@ print 'Sampling ' + str(args.sample_fraction) + ' of responses from layer ' + ar
 imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
 
-caffe.set_device(int(args.gpu))
-if mode == 'cpu':
-    caffe.set_mode_cpu()
-else:
-    caffe.set_mode_gpu()
+caffe.set_mode_gpu()
 
-net = caffe.Classifier(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
-        caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
-        mean=np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1),
-        channel_swap=(2, 1, 0),
-        raw_scale=255,
-        image_dims=(224, 224))
+net = caffe.Classifier(
+    original_models_root + 'vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
+    original_models_root + 'vgg16/VGG_ILSVRC_16_layers.caffemodel',
+    mean=np.load(ilsvrc_mean_file_path).mean(1).mean(1),
+    channel_swap=(2, 1, 0),
+    raw_scale=255,
+    image_dims=(224, 224))
 
 # Dimensions: 224x224, with 3 channels. Batch size 1
-# NOTE: maybe can use batching to speed up processing?
+# TODO: use batching to speed up processing?
 net.blobs['data'].reshape(1, 3, 224, 224)
 
 
@@ -97,8 +89,8 @@ def load_image(path, echo=True):
         print labels[top_k]
 
 
-## NOTE: Resize every image to 224x224, or resize but keep original ratio? Does it affect things?
-## Without resizing, feeding into data, does it crop or will resize?
+# TODO: Resize every image to 224x224, or resize but keep original ratio? Does it affect things?
+# Without resizing, feeding into data, does it crop or will resize?
 
 sample_mask = []
 
@@ -127,7 +119,7 @@ if args.load_layer_dump_from is not None:
     print 'Finished loading dump.'
 else:
     # Loop through every image in the given directory
-    # TODO: THIS CAN BE PARALLELIZED, BY BATCH LOADING! TRY THAT
+    # TODO: THIS CAN BE PARALLELIZED, BY BATCH LOADING
     # BUT PROBABLY THAT IS NOT THE BOTTLENECK...
     for (dirpath, dirnames, filenames) in walk(args.images):
         for filename in filenames:
@@ -145,13 +137,13 @@ else:
                 print str(num_responses) + ' filters of ' + str(height_response) + 'x' + str(width_response)
 
                 sample_mask = sample(width_response, height_response,
-                        float(args.sample_fraction) * width_response * height_response)
+                                     float(args.sample_fraction) * width_response * height_response)
 
             # TODO: this could be parallelized by multiplication -- then filtering out 0 columns
             for y in range(height_response):
                 for x in range(width_response):
                     if sample_mask[y][x]:
-                        ## NOTE: DOUBLE CHECK IF FIRST IS Y SECOND IS X, corresponding to images
+                        # TODO: DOUBLE CHECK IF FIRST IS Y SECOND IS X, corresponding to images
                         vectors.append(response[:, y, x].copy())
                         vec_origin_file.append(path)
                         vec_location.append((x, y))
@@ -186,7 +178,7 @@ else:
 
 print 'Got', len(vectors), 'vectors in total for clustering'
 
-# TRY PCA, ICA AS WELL!!!
+# TODO: Try PCA and ICA as well
 # if this method works, continue to explore how to make your initial method work as well
 
 if args.load_classification_dump_from is not None:
@@ -220,13 +212,14 @@ else:
         f.close()
         print 'Finished saving classification dump'
 
+
 def do_tsne(data):
     tsne_model = TSNE(n_components=2, init='pca')
     trans_tsne = tsne_model.fit_transform(data)
     return tsne_model, trans_tsne
 
 
-## WARNING: THIS METHOD OF SELECTING MAY NOT BE WORKING AS YOU INTENDED!!!
+# TODO: double check if this method of selection works as you expected
 def plot_clusters_2d(data, labels, selected_rows):
     plt.scatter(data[selected_rows, 0], data[selected_rows, 1], c=labels[selected_rows], cmap=plt.get_cmap('Spectral'), lw=0)
     plt.show()
@@ -239,8 +232,6 @@ pca = PCA(n_components=80)
 #vectors_trans = pca.fit_transform(vectors)
 #print pca.explained_variance_ratio_
 #predicted = kmeans_obj.fit_predict(vectors_trans)
-
-
 #########
 
 
@@ -295,8 +286,8 @@ def plot_raw_activation(cluster_i):
     A, S = get_sparsity(totalsum)
     plt.annotate(
         'Sparsity: S=' + str(S),
-        xy = (0.9, 0.9), xytext = (0.9, 0.9),
-        textcoords = 'axes fraction', ha = 'right', va = 'bottom')
+        xy=(0.9, 0.9), xytext=(0.9, 0.9),
+        textcoords='axes fraction', ha='right', va='bottom')
 
     plt.show()
 
@@ -506,8 +497,10 @@ def do_pca_on_neuron(neuron_i, do_ica=False):
     return mean_patch, flattened, patches_pca, patches_trans
 
 
-## Plot image with response of a certain neuron, or highest among all neurons in each hypercolumn
 def dye_image_with_response(path):
+    """
+    Plot image with response of a certain neuron, or highest among all neurons in each hypercolumn
+    """
     # Plot a heat map to show which places have highest activation
     heatmap = np.empty([224, 224])
     load_image(path)
@@ -577,6 +570,7 @@ def find_patches_in_cluster(cluster_i, image_path, dist_thres_percentage=1.0):
     print 'Found', total_patches_found, 'patches in total,', patches_ignored, 'ignored due to distance'
     plt.show()
 
+
 def view_nth_in_cluster(cluster_i, i):
     num_in_cluster_seen = 0
     for vec_id in range(len(vectors)):
@@ -589,8 +583,10 @@ def view_nth_in_cluster(cluster_i, i):
                 num_in_cluster_seen = num_in_cluster_seen + 1
 
 
-# View n images in the cluster_i-th cluster that are closest to the center
 def view_nth_cluster(cluster_i, n):
+    """
+    View n images in the cluster_i-th cluster that are closest to the center
+    """
     fig = plt.figure()
     fig_id = 1
     dim_plot = math.floor(math.sqrt(n))
@@ -615,7 +611,8 @@ def view_nth_cluster(cluster_i, n):
 
     plt.show()
 
-#### THIS FUNCTION IS TOO SLOW. CAN BE MUCH IMPROVED!!!
+
+# TODO: this function is too slow and can be improved
 def view_n_from_clusters(from_cluster, to_cluster, n_each, save_plots=False):
     fig = plt.figure()
     fig_id = 1
@@ -635,6 +632,7 @@ def view_n_from_clusters(from_cluster, to_cluster, n_each, save_plots=False):
         plt.savefig(os.path.join(args.save_plots_to, args.layer + '_' + 'clusters' + str(from_cluster) + 'to' + str(to_cluster) + '.png'))
     else:
         plt.show()
+
 
 if args.save_plots_to is not None:
     matplotlib.use('Agg')

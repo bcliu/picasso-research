@@ -1,11 +1,16 @@
-from env.env import *
 import argparse
-from os import walk
 import os
-
-import numpy as np
-import matplotlib.pyplot as plt
 import pickle
+from os import walk
+
+import caffe
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn import svm
+
+from env.env import *
+
+caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('--yesimages', default=research_root + 'images/flickr/eyes-yes/', required=False)
@@ -17,16 +22,11 @@ parser.add_argument('--loaddump', help='load dumped variables', action='store_tr
 
 parser.add_argument('--layer', help='which layer in AlexNet to use for training and classification', default='pool5', required=False)
 # Default value means take the entire kernel
-parser.add_argument('--kernelsize', help='what square size to take from the center of kernel to use for training and classification', default=0, required=False)
+parser.add_argument('--kernelsize',
+                    help='what square size to take from the center of kernel to use for training and classification',
+                    default=0, required=False)
 parser.add_argument('--skiptest', action='store_true')
 args = parser.parse_args()
-
-# Make sure that caffe is on the python path:
-import sys
-sys.path.insert(0, caffe_root + 'python')
-
-import caffe
-from sklearn import svm
 
 LAYER_TO_USE = args.layer
 
@@ -37,20 +37,15 @@ plt.rcParams['figure.figsize'] = (10, 10)
 plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
 
-if mode == 'cpu':
-    caffe.set_mode_cpu()
-else:
-    caffe.set_mode_gpu()
-
-net = caffe.Net(caffe_root + 'models/bvlc_reference_caffenet/deploy.prototxt',
-                caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel',
+net = caffe.Net(original_models_root + 'bvlc_reference_caffenet/deploy.prototxt',
+                original_models_root + 'bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel',
                 caffe.TEST)
 
 transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
-transformer.set_transpose('data', (2,0,1))
-transformer.set_mean('data', np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1)) # mean pixel
+transformer.set_transpose('data', (2, 0, 1))
+transformer.set_mean('data', np.load(ilsvrc_mean_file_path).mean(1).mean(1))
 transformer.set_raw_scale('data', 255)
-transformer.set_channel_swap('data', (2,1,0))
+transformer.set_channel_swap('data', (2, 1, 0))
 
 datapoints = []
 datalabels = []
@@ -58,14 +53,17 @@ clf = svm.SVC()
 
 pairs = [(args.yesimages, 1), (args.noimages, 2)]
 
+
 def load_image(path):
     net.blobs['data'].data[...] = transformer.preprocess('data', caffe.io.load_image(path))
     out = net.forward()
 
+
 def layer_to_svm_data(net):
-    ''' Take the layer data from a Caffe instance, crop the filters if necessary,
-        and return a 1D array for training and classification
-    '''
+    """
+    Take the layer data from a Caffe instance, crop the filters if necessary,
+    and return a 1D array for training and classification
+    """
     layer_data = net.blobs[LAYER_TO_USE].data[0]
     if layer_data.size != len(layer_data):
         # Flatten it if the data is multidimensional
@@ -81,8 +79,10 @@ def layer_to_svm_data(net):
 
     return layer_data.tolist()
 
+
 def predict():
     return clf.predict([layer_to_svm_data(net)])
+
 
 def test_on_dir(path):
     for (dirpath, dirnames, filenames) in walk(path):
@@ -92,6 +92,7 @@ def test_on_dir(path):
             prediction = predict()
             print 'Prediction for ' + path + ': ' + prediction[0].astype('str')
 
+
 print 'Using ' + LAYER_TO_USE + ' layer for training'
 if args.dump:
     print 'Saving variables dump to ' + args.dumppath
@@ -99,7 +100,7 @@ if args.loaddump:
     print 'Loading variables dump from ' + args.dumppath
 
 dump_filename = args.dumppath
-if args.loaddump == False:
+if not args.loaddump:
 
     for pair in pairs:
         for (dirpath, dirnames, filenames) in walk(pair[0]):

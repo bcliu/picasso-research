@@ -5,6 +5,9 @@ import os
 
 
 class Colors:
+    def __init__(self):
+        pass
+
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKGREEN = '\033[92m'
@@ -14,10 +17,10 @@ class Colors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--caffe_models', nargs='+', required=True)
 parser.add_argument('-t', '--tests_dir', required=True)
-parser.add_argument('--gpu', required=False, default='1')
 args = parser.parse_args()
 
 test_paths = []
@@ -35,12 +38,10 @@ for model in args.caffe_models:
 
     for test in test_paths:
         print Colors.WARNING + 'on ' + os.path.basename(test) + ':' + Colors.ENDC
-        command = "caffe test -weights " + caffe_model + " -gpu " + args.gpu + " -model " + test
+        command = "caffe test -weights " + caffe_model + " -gpu 1 -model " + test
         print Colors.OKBLUE + 'command: ' + command + Colors.ENDC
         out = subprocess.check_output(command.split(' '), stderr=subprocess.STDOUT).splitlines()
         print out[-3]
         print out[-2]
 
 print 'Done.'
-
-# MAKE IT SO THAT THE PROTOTXT ARE GENERATED AUTOMATICALLY FROM TEMPLATE!!

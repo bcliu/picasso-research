@@ -1,11 +1,13 @@
 """AlexNet feature extractor.
 Extracts features from an image, using an AlexNet model.
 """
-from env.env import *
 import argparse
-import numpy as np
-import matplotlib.pyplot as plt
+
 import caffe
+import matplotlib.pyplot as plt
+import numpy as np
+
+from env.env import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--image-path', required=True)
@@ -33,7 +35,7 @@ plt.rcParams['figure.figsize'] = (10, 10)
 plt.rcParams['image.interpolation'] = 'nearest'
 plt.rcParams['image.cmap'] = 'gray'
 
-caffe.set_mode_cpu()
+caffe.set_mode_gpu()
 net = caffe.Net(original_models_root + 'bvlc_reference_caffenet/deploy.prototxt',
                 original_models_root + 'bvlc_reference_caffenet/' + args.alexnet_model,
                 caffe.TEST)
@@ -41,7 +43,7 @@ net = caffe.Net(original_models_root + 'bvlc_reference_caffenet/deploy.prototxt'
 # input preprocessing: 'data' is the name of the input blob == net.inputs[0]
 transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
 transformer.set_transpose('data', (2, 0, 1))
-transformer.set_mean('data', np.load(dataset_root + 'ilsvrc12/ilsvrc_2012_mean.npy').mean(1).mean(1))  # mean pixel
+transformer.set_mean('data', np.load(ilsvrc_mean_file_path).mean(1).mean(1))  # mean pixel
 transformer.set_raw_scale('data', 255)  # the reference model operates on images in [0,255] range instead of [0,1]
 transformer.set_channel_swap('data', (2, 1, 0))
 net.blobs['data'].reshape(50, 3, 227, 227)

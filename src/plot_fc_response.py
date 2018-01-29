@@ -9,16 +9,11 @@ import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import caffe
 
 # Set Caffe output level to Warnings
 os.environ['GLOG_minloglevel'] = '2'
-
-sys.path.insert(0, caffe_root + 'python')
-import caffe
-if mode == 'cpu':
-    caffe.set_mode_cpu()
-else:
-    caffe.set_mode_gpu()
+caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input_dirs', nargs='+')
@@ -28,7 +23,6 @@ parser.add_argument('-m', '--alexnet_model')
 parser.add_argument('-o', '--save_dump_to', required=False, default=None)
 parser.add_argument('-b', '--histogram_bins', type=int, default=50, required=False)
 parser.add_argument('--no_plot', action='store_true')
-parser.add_argument('--gpu', required=False, type=int, default=0)
 args = parser.parse_args()
 
 # Array of arrays: each element array i contains activations of all input images in
@@ -38,12 +32,13 @@ prob_activations = []
 
 # Load from directory if no dump is specified
 if args.input_dump is None:
-    net = caffe.Classifier(caffe_root + 'models/bvlc_reference_caffenet/deploy.prototxt',
-                           caffe_root + 'models/bvlc_reference_caffenet/' + args.alexnet_model,
-                           mean=np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1),
-                           channel_swap=(2, 1, 0),
-                           raw_scale=255,
-                           image_dims=(227, 227))
+    net = caffe.Classifier(
+        original_models_root + 'bvlc_reference_caffenet/deploy.prototxt',
+        original_models_root + 'bvlc_reference_caffenet/' + args.alexnet_model,
+        mean=np.load(ilsvrc_mean_file_path).mean(1).mean(1),
+        channel_swap=(2, 1, 0),
+        raw_scale=255,
+        image_dims=(227, 227))
     net.blobs['data'].reshape(1, 3, 227, 227)
 
     for dir_i in range(len(args.input_dirs)):
@@ -85,7 +80,7 @@ if not args.no_plot:
         n, bins, patches = plt.hist(fc8_activations[i], args.histogram_bins, normed=1, facecolor=colors[i], alpha=0.5)
     plt.show()
 
-    print 'Not normalized fc8 activations:'
+    print 'Non-normalized fc8 activations:'
     for i in range(num):
         n, bins, patches = plt.hist(fc8_activations[i], args.histogram_bins, normed=0, facecolor=colors[i], alpha=0.5)
     plt.show()
@@ -95,7 +90,7 @@ if not args.no_plot:
         n, bins, patches = plt.hist(prob_activations[i], args.histogram_bins * 10, normed=1, facecolor=colors[i], alpha=0.5)
     plt.show()
 
-    print 'Not normalized prob layer activations:'
+    print 'Non-normalized prob layer activations:'
     for i in range(num):
         n, bins, patches = plt.hist(prob_activations[i], args.histogram_bins * 10, normed=0, facecolor=colors[i], alpha=0.5)
     plt.show()

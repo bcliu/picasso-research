@@ -6,16 +6,6 @@
 # 4. Randomly move regions based on given radius, while avoiding collision
 # 5. Smooth out boundaries
 
-# TODO: Try the neuron-based approach as well?
-# TODO: another concern: maybe better to adjust ratio to make it square
-# TODO: TRY FILL MOVED REGION WITH DOMINANT COLOR OR GRADIENT? OR JUST GAUSSIAN SMOOTH IT?
-# TODO: Ignore group if few patches are in it. meaning outlier
-# TODO: Should try to load multiple scales models at the same time, find which one is the most proper
-# TODO: scaling
-# TODO: avoid collision while jittering
-# TODO: suppress overlapping regions in merged regions. Ask both sides to retreat a little so that no overlaps
-# TODO: how to make movement even smoother: move a couple pixels at a time!!
-# TODO: try use neurons instead of clusters
 from env.env import *
 import argparse
 from os import walk
@@ -27,15 +17,11 @@ from Queue import Queue
 from PIL import Image
 import fnmatch
 import time
+import caffe
 
 # Set Caffe output level to Warnings
 os.environ['GLOG_minloglevel'] = '2'
-
-import caffe
-if mode == 'cpu':
-    caffe.set_mode_cpu()
-else:
-    caffe.set_mode_gpu()
+caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input_dir', required=True)
@@ -64,13 +50,14 @@ from matplotlib.patches import Rectangle
 
 caffe.set_device(int(args.gpu))
 
-net = caffe.Classifier(caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
-        caffe_root + 'models/vgg16/VGG_ILSVRC_16_layers.caffemodel',
-        mean=np.load(caffe_root + 'python/caffe/imagenet/ilsvrc_2012_mean.npy').mean(1).mean(1),
-        channel_swap=(2, 1, 0),
-        raw_scale=255,
-        image_dims=(224, 224))
-net.blobs['data'].reshape(1, 3, 224, 224) #??? necessary?
+net = caffe.Classifier(
+    original_models_root + 'vgg16/VGG_ILSVRC_16_layers_deploy.prototxt',
+    original_models_root + 'vgg16/VGG_ILSVRC_16_layers.caffemodel',
+    mean=np.load(ilsvrc_mean_file_path).mean(1).mean(1),
+    channel_swap=(2, 1, 0),
+    raw_scale=255,
+    image_dims=(224, 224))
+net.blobs['data'].reshape(1, 3, 224, 224)  # TODO: Is this necessary?
 
 print 'Loading layer dump file from', args.layer_dump
 f = open(args.layer_dump)
