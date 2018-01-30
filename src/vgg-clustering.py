@@ -1,3 +1,7 @@
+"""
+Randomly sample a fraction of neuron responses from a specified layer in VGG16, classify them into n_clusters,
+and show plots of the patches that correspond to these neurons in the images.
+"""
 import argparse
 import math
 import os
@@ -20,7 +24,7 @@ from env.env import *
 caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--images', default=research_root + 'images/flickr/eyes-yes/', required=False)
+parser.add_argument('--images', default=research_root + 'images/flickr/eyes_yes/', required=False)
 parser.add_argument('--layer', default='conv4_1', required=False)
 parser.add_argument('--sample_fraction', default=0.3, required=False)
 parser.add_argument('--n_clusters', default=32, required=False)
@@ -65,7 +69,7 @@ plt.rcParams['image.cmap'] = 'gray'
 print 'Loading images from ' + args.images
 print 'Sampling ' + str(args.sample_fraction) + ' of responses from layer ' + args.layer
 
-imagenet_labels_filename = caffe_root + 'data/ilsvrc12/synset_words.txt'
+imagenet_labels_filename = dataset_root + 'ilsvrc12/synset_words.txt'
 labels = np.loadtxt(imagenet_labels_filename, str, delimiter='\t')
 
 net = caffe.Classifier(
