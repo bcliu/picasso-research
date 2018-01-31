@@ -1,3 +1,4 @@
+from os import path
 import tempfile
 
 import google.protobuf.text_format as text_format
@@ -41,11 +42,11 @@ def load_caffenet_net_parameter():
     """
     Loads default CaffeNet NetParameter for training and evaluation
     """
-    return load_net_parameter_file(original_models_root + 'bvlc_reference_caffenet/train_val.prototxt')
+    return load_net_parameter_file(path.join(original_models_root, 'bvlc_reference_caffenet/train_val.prototxt'))
 
 
 def load_caffenet_solver_parameter():
     """
     Loads default CaffeNet SolverParameter
     """
-    return load_solver_parameter_file(original_models_root + 'bvlc_reference_caffenet/solver.prototxt')
+    return load_solver_parameter_file(path.join(original_models_root, 'bvlc_reference_caffenet/solver.prototxt'))
