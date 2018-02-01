@@ -29,7 +29,7 @@ test_set_dir_names = [
 ]
 
 for test_set_dir in test_set_dir_names:
-    test_models.append(create_test_net(path.join(dataset_root, test_set_dir)))
+    test_models.append(create_caffenet_test_net(path.join(dataset_root, test_set_dir)))
 
 for model in args.caffe_models:
     caffe_model = path.abspath(model)

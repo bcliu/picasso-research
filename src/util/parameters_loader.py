@@ -57,7 +57,12 @@ def load_caffenet_test_net_parameter():
         path.join(research_root, 'caffe_models', 'bvlc_reference_caffenet', 'test.prototxt'))
 
 
-def create_test_net(images_lmdb_path, batch_size=50, crop_size=227):
+def load_vgg_test_net_parameter():
+    return load_net_parameter_file(
+        path.join(research_root, 'caffe_models', 'vgg16', 'vgg.test.prototxt'))
+
+
+def create_caffenet_test_net(images_lmdb_path, batch_size=50, crop_size=227):
     """
     Creates NetParameter for testing, with test images stored in an lmdb
     Returns a tuple of (net_name, net_path)

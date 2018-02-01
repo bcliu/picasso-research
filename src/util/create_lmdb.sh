@@ -2,8 +2,6 @@
 # Create the imagenet lmdb inputs
 # N.B. set the path to the imagenet train + val data dirs
 
-TOOLS=/home/chenl/software/caffe-rc3/build/tools
-
 if [ $# -eq 6 ]; then
     TRAIN_DATA_ROOT=$1
     TRAIN_FILELIST=$2
@@ -23,7 +21,7 @@ fi
 # Set RESIZE=true to resize the images to 256x256. Leave as false if images have
 # already been resized using another tool.
 RESIZE=true
-if $RESIZE; then
+if ${RESIZE}; then
   # WARNING!! DIFFERENCE BETWEEN 227 (input size of alexnet), 224 (input size of vgg) AND 256!!
   RESIZE_HEIGHT=256
   RESIZE_WIDTH=256
@@ -50,24 +48,24 @@ fi
 
 echo "Creating train lmdb..."
 
-GLOG_logtostderr=1 $TOOLS/convert_imageset \
-    --resize_height=$RESIZE_HEIGHT \
-    --resize_width=$RESIZE_WIDTH \
+GLOG_logtostderr=1 convert_imageset \
+    --resize_height=${RESIZE_HEIGHT} \
+    --resize_width=${RESIZE_WIDTH} \
     --shuffle \
-    $TRAIN_DATA_ROOT/ \
-    $TRAIN_FILELIST \
-    $TRAIN_LMDB_OUT
+    ${TRAIN_DATA_ROOT}/ \
+    ${TRAIN_FILELIST} \
+    ${TRAIN_LMDB_OUT}
 
 if [ $# -eq 6 ]; then
     echo "Creating val lmdb..."
 
-    GLOG_logtostderr=1 $TOOLS/convert_imageset \
-        --resize_height=$RESIZE_HEIGHT \
-        --resize_width=$RESIZE_WIDTH \
+    GLOG_logtostderr=1 convert_imageset \
+        --resize_height=${RESIZE_HEIGHT} \
+        --resize_width=${RESIZE_WIDTH} \
         --shuffle \
-        $VAL_DATA_ROOT/ \
-        $VAL_FILELIST \
-        $VAL_LMDB_OUT
+        ${VAL_DATA_ROOT}/ \
+        ${VAL_FILELIST} \
+        ${VAL_LMDB_OUT}
 fi
 
 echo "Done."
