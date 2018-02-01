@@ -32,7 +32,7 @@ def create_caffenet_finetune_fixed_conv3_net(model_name, source_lmdb):
     Creates NetParameter object for finetuning CaffeNet, with conv1, conv2 and conv3 layers fixed,
     using the same parameters as in fixed_conv3_train_val.prototxt
     """
-    net_parameter = load_caffenet_net_parameter()
+    net_parameter = load_caffenet_training_net_parameter()
 
     net_parameter.name = model_name
 
@@ -42,7 +42,7 @@ def create_caffenet_finetune_fixed_conv3_net(model_name, source_lmdb):
     train_data_layer = net_parameter.layer[0]
     train_data_layer.transform_param.mean_file = path.join(dataset_root, 'ilsvrc12', 'imagenet_mean.binaryproto')
     train_data_layer.data_param.source = source_lmdb
-    train_data_layer.data_param.batch_size = 128
+    # train_data_layer.data_param.batch_size = 128
 
     # Set testing data layer parameters
     test_data_layer = net_parameter.layer[1]
@@ -88,7 +88,7 @@ def create_caffenet_finetune_fixed_conv3_solver(model_name, source_lmdb):
     with open(net_parameter_file_path, 'w') as net_parameter_file:
         net_parameter_file.write(str(net_parameter))
 
-    solver_parameter = load_caffenet_solver_parameter()
+    solver_parameter = load_caffenet_training_solver_parameter()
 
     solver_parameter.net = net_parameter_file_path
     solver_parameter.test_iter[0] = 100

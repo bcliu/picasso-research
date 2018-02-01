@@ -1,44 +1,43 @@
 import argparse
-import os
 import subprocess
-from os import walk
 
-
-class Colors:
-    def __init__(self):
-        pass
-
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
+from util.parameters_loader import *
+from util.utils import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--caffe_models', nargs='+', required=True)
-parser.add_argument('-t', '--tests_dir', required=True)
 args = parser.parse_args()
 
-test_paths = []
+# List of (model_name, model_path) tuples
+test_models = []
 
-for (dirpath, dirnames, filenames) in walk(args.tests_dir):
-    for filename in filenames:
-        if filename.endswith('.prototxt'):
-            test_paths.append(os.path.abspath(os.path.join(dirpath, filename)))
+'''
+missing:
+flickr/flickr_40k_lmdb
+flickr/flickr_test_lmdb
+ilsvrc/ilsvrc_val_train_lmdb
+ilsvrc/ilsvrc_val_test_lmdb
+'''
+test_set_dir_names = [
+    'cubic_face_lmdb',
+    'cubic_grayscale_lmdb',
 
-test_paths.sort()
+    'labeled_faces_in_wild/lfw_train_lmdb',
+    'labeled_faces_in_wild/lfw_test_lmdb',
+    'labeled_faces_in_wild/lfw_train_conv32_5px_lmdb',
+    'labeled_faces_in_wild/lfw_train_conv33_15px_lmdb'
+]
+
+for test_set_dir in test_set_dir_names:
+    test_models.append(create_test_net(path.join(dataset_root, test_set_dir)))
 
 for model in args.caffe_models:
-    caffe_model = os.path.abspath(model)
-    print Colors.WARNING + 'Testing caffe model ' + os.path.basename(caffe_model) + Colors.ENDC
+    caffe_model = path.abspath(model)
+    print Colors.WARNING + 'Testing caffe model ' + path.basename(caffe_model) + Colors.ENDC
 
-    for test in test_paths:
-        print Colors.WARNING + 'on ' + os.path.basename(test) + ':' + Colors.ENDC
-        command = "caffe test -weights " + caffe_model + " -gpu 1 -model " + test
+    for model_name, model_path in test_models:
+        print Colors.WARNING + 'on ' + model_name + ':' + Colors.ENDC
+        command = "caffe test -weights " + caffe_model + " -gpu 0 -model " + model_path
         print Colors.OKBLUE + 'command: ' + command + Colors.ENDC
         out = subprocess.check_output(command.split(' '), stderr=subprocess.STDOUT).splitlines()
         print out[-3]
