@@ -8,15 +8,13 @@ Only images not of the specified label parameter will be saved to the output fil
 import argparse
 
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('-i', '--input_file', required=True)
-parser.add_argument('-o', '--output_file', required=True)
+parser.add_argument('-i', '--input-file', dest='input_file', required=True)
+parser.add_argument('-o', '--output-file', dest='output_file', required=True)
 parser.add_argument('-l', '--label', type=int, required=True)
 args = parser.parse_args()
 
-in_f = open(args.input_file, 'r')
-out_f = open(args.output_file, 'w')
-
-for line in in_f:
-    im_name, label = line.split(' ')
-    if int(label) != args.label:
-        out_f.write(line)
+with open(args.input_file, 'r') as input_file, open(args.output_file, 'w') as output_file:
+    for line in input_file:
+        _, label = line.split(' ')
+        if int(label) != args.label:
+            output_file.write(line)
