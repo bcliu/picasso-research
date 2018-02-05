@@ -104,6 +104,50 @@ def create_caffenet_finetune_fixed_conv3_solver(model_name, source_lmdb):
     return solver_parameter_file_path
 
 
+def create_vgg_finetune_net(model_name, source_lmdb):
+    net_parameter = load_vgg_training_net_parameter()
+
+    net_parameter.name = model_name
+
+    # Set training data layer parameters
+    train_data_layer = net_parameter.layer[0]
+    train_data_layer.data_param.source = source_lmdb
+    train_data_layer.data_param.batch_size = 64
+
+    # Set testing data layer parameters
+    test_data_layer = net_parameter.layer[1]
+    test_data_layer.data_param.source = source_lmdb
+    train_data_layer.data_param.batch_size = 32
+
+    return net_parameter
+
+
+def create_vgg_finetune_solver(model_name, source_lmdb):
+    folder_path = path.join(trained_models_root, 'vgg16_models', model_name)
+    if not path.exists(folder_path):
+        makedirs(folder_path)
+
+    net_parameter = create_vgg_finetune_net(model_name, source_lmdb)
+    net_parameter_file_path = path.join(folder_path, model_name + '_train_val.prototxt')
+    with open(net_parameter_file_path, 'w') as net_parameter_file:
+        net_parameter_file.write(str(net_parameter))
+
+    solver_parameter = load_vgg_training_solver_parameter()
+
+    solver_parameter.net = net_parameter_file_path
+    solver_parameter.test_iter[0] = 100
+    solver_parameter.base_lr = 0.001
+    solver_parameter.stepsize = 6000
+    solver_parameter.max_iter = 50000
+    solver_parameter.snapshot_prefix = path.join(folder_path, 'snapshot')
+
+    solver_parameter_file_path = path.join(folder_path, model_name + '_solver.prototxt')
+    with open(solver_parameter_file_path, 'w') as solver_parameter_file:
+        solver_parameter_file.write(str(solver_parameter))
+
+    return solver_parameter_file_path
+
+
 def run_solvers(niter, solvers, disp_interval=10):
     """Run solvers for niter iterations,
        returning the loss and accuracy recorded each iteration.
@@ -132,8 +176,8 @@ def run_solvers(niter, solvers, disp_interval=10):
 
 
 solver_param_file = create_caffenet_finetune_fixed_conv3_solver(
-    'flickr_40k_conv32_5px_256_with_ilsvrc_fixed_conv3',
-    path.join(dataset_root, 'flickr', 'flickr_40k_conv32_5px_256x256_with_ilsvrc_lmdb'))
+    model_name='lfw_train_conv32_5px_fixed_conv3',
+    source_lmdb=path.join(dataset_root, 'labeled_faces_in_wild', 'lfw_train_conv32_5px_lmdb'))
 pretrained_model_path = path.join(original_models_root, 'bvlc_reference_caffenet', 'bvlc_reference_caffenet.caffemodel')
 solver = caffe.get_solver(solver_param_file)
 solver.net.copy_from(pretrained_model_path)

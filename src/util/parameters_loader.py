@@ -57,9 +57,16 @@ def load_caffenet_test_net_parameter():
         path.join(research_root, 'caffe_models', 'bvlc_reference_caffenet', 'test.prototxt'))
 
 
+def load_vgg_training_net_parameter():
+    return load_net_parameter_file(path.join(research_root, 'caffe_models', 'vgg16', 'vgg.train_val.prototxt'))
+
+
+def load_vgg_training_solver_parameter():
+    return load_solver_parameter_file(path.join(research_root, 'caffe_models', 'vgg16', 'vgg.solver.prototxt'))
+
+
 def load_vgg_test_net_parameter():
-    return load_net_parameter_file(
-        path.join(research_root, 'caffe_models', 'vgg16', 'vgg.test.prototxt'))
+    return load_net_parameter_file(path.join(research_root, 'caffe_models', 'vgg16', 'vgg.test.prototxt'))
 
 
 def create_caffenet_test_net(images_lmdb_path, batch_size=50, crop_size=227):
