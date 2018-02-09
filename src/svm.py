@@ -18,11 +18,15 @@ from env.env import *
 caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('--type1', default=research_root + 'images/eyes/normal/sm/', required=False)
-parser.add_argument('--type2', default=research_root + 'images/noses/normal/sm/', required=False)
-parser.add_argument('--others', default=research_root + 'images/others/sm/', required=False)
-parser.add_argument('--dump', help='dump variables to files for fast loading', action='store_true')
-parser.add_argument('--loaddump', help='load dumped variables', action='store_true')
+parser.add_argument('--type1', default=research_root + 'images/eyes/normal/sm/', required=False,
+                    help='Path to image files of type 1 (e.g. eye images)')
+parser.add_argument('--type2', default=research_root + 'images/noses/normal/sm/', required=False,
+                    help='Path to image files of type 2 (e.g. nose images)')
+parser.add_argument('--others', default=research_root + 'images/others/sm/', required=False,
+                    help='Path to other types of image files (e.g. not eye and not nose)')
+parser.add_argument('--dump', help='Dump variables to files for fast loading', action='store_true')
+parser.add_argument('--load-dump', dest='loaddump', action='store_true',
+                    help='Load dumped variables, including datapoints, datalabels, and clf')
 args = parser.parse_args()
 
 imagenet_labels_filename = original_models_root + 'ilsvrc12/synset_words.txt'
@@ -43,7 +47,9 @@ transformer.set_mean('data', np.load(ilsvrc_mean_file_path).mean(1).mean(1))
 transformer.set_raw_scale('data', 255)
 transformer.set_channel_swap('data', (2, 1, 0))
 
+# List of fc6 responses of each image
 datapoints = []
+# List of labels of each image (1, 2 or 3)
 datalabels = []
 clf = svm.SVC()
 

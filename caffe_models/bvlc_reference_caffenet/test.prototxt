@@ -14,7 +14,7 @@ layer {
   }
   data_param {
     source: "/home/chenl/drive/cubic_face_lmdb"
-    batch_size: 50
+    batch_size: 128
     backend: LMDB
   }
 }

@@ -32,7 +32,7 @@ if args.gen_list_with_label is not None:
             print '%s already exists. Move or rename this file first.' % label_list_path
             exit()
 
-        save_file_list(images_path, label_list_path, args.gen_list_with_label)
+            save_single_label_images_list(images_path, label_list_path, args.gen_list_with_label)
         image_label_lists.append(label_list_path)
 
         print 'Created file list with label %s in %s' % (args.gen_list_with_label, label_list_path)

@@ -78,6 +78,9 @@ def create_caffenet_finetune_fixed_conv3_net(model_name, source_lmdb):
 def create_caffenet_finetune_fixed_conv3_solver(model_name, source_lmdb):
     """
     Create SolverParameter object for finetuning CaffeNet
+    :param model_name: Model name as used in solver file
+    :param source_lmdb: Path to lmdb of training images data
+    :return: Solver file path
     """
     folder_path = path.join(trained_models_root, 'alexnet_models', model_name)
     if not path.exists(folder_path):
@@ -112,12 +115,12 @@ def create_vgg_finetune_net(model_name, source_lmdb):
     # Set training data layer parameters
     train_data_layer = net_parameter.layer[0]
     train_data_layer.data_param.source = source_lmdb
-    train_data_layer.data_param.batch_size = 64
+    train_data_layer.data_param.batch_size = 8
 
     # Set testing data layer parameters
     test_data_layer = net_parameter.layer[1]
     test_data_layer.data_param.source = source_lmdb
-    train_data_layer.data_param.batch_size = 32
+    train_data_layer.data_param.batch_size = 8
 
     return net_parameter
 
@@ -136,7 +139,7 @@ def create_vgg_finetune_solver(model_name, source_lmdb):
 
     solver_parameter.net = net_parameter_file_path
     solver_parameter.test_iter[0] = 100
-    solver_parameter.base_lr = 0.001
+    solver_parameter.base_lr = 0.01
     solver_parameter.stepsize = 6000
     solver_parameter.max_iter = 50000
     solver_parameter.snapshot_prefix = path.join(folder_path, 'snapshot')
@@ -176,14 +179,15 @@ def run_solvers(niter, solvers, disp_interval=10):
 
 
 solver_param_file = create_caffenet_finetune_fixed_conv3_solver(
-    model_name='lfw_train_conv32_5px_fixed_conv3',
-    source_lmdb=path.join(dataset_root, 'labeled_faces_in_wild', 'lfw_train_conv32_5px_lmdb'))
+    model_name='flickr_40k_square_with_ilsvrc_fixed_conv3',
+    source_lmdb=path.join(dataset_root, 'flickr', 'flickr_40k_square_with_ilsvrc_lmdb'))
 pretrained_model_path = path.join(original_models_root, 'bvlc_reference_caffenet', 'bvlc_reference_caffenet.caffemodel')
-solver = caffe.get_solver(solver_param_file)
-solver.net.copy_from(pretrained_model_path)
 
 
 def run_test():
+    solver = caffe.get_solver(solver_param_file)
+    solver.net.copy_from(pretrained_model_path)
+
     niter = 200  # number of iterations to train
 
     print 'Running solvers for %d iterations...' % niter

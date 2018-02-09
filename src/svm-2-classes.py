@@ -13,20 +13,22 @@ from env.env import *
 caffe.set_mode_gpu()
 
 parser = argparse.ArgumentParser(description='')
-parser.add_argument('--yesimages', default=research_root + 'images/flickr/eyes-yes/', required=False)
-parser.add_argument('--noimages', default=research_root + 'images/flickr/flickr_other/', required=False)
+parser.add_argument('--yes-images', dest='yesimages', default=research_root + 'images/flickr/eyes-yes/',
+                    required=False)
+parser.add_argument('--no-images', dest='noimages', default=research_root + 'images/flickr/flickr_other/',
+                    required=False)
 
 parser.add_argument('--dump', help='dump variables to files for fast loading', action='store_true')
-parser.add_argument('--dumppath', help='path to save dump file', default='svm2c-data.dump', required=False)
-parser.add_argument('--loaddump', help='load dumped variables', action='store_true')
+parser.add_argument('--save-dump-to', dest='dumppath', help='path to save dump file', default='svm2c-data.dump',
+                    required=False)
+parser.add_argument('--load-dump', dest='loaddump', help='load dumped variables', action='store_true')
 
 parser.add_argument('--layer', help='which layer in AlexNet to use for training and classification', default='pool5',
                     required=False)
 # Default value means take the entire kernel
-parser.add_argument('--kernelsize',
-                    help='what square size to take from the center of kernel to use for training and classification',
-                    default=0, required=False)
-parser.add_argument('--skiptest', action='store_true')
+parser.add_argument('--kernel-size', dest='kernelsize', default=0, required=False,
+                    help='what square size to take from the center of kernel to use for training and classification')
+parser.add_argument('--skip-test', dest='skiptest', action='store_true')
 args = parser.parse_args()
 
 LAYER_TO_USE = args.layer
