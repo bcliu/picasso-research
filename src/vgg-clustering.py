@@ -26,21 +26,27 @@ caffe.set_mode_gpu()
 parser = argparse.ArgumentParser()
 parser.add_argument('--images', default=research_root + 'images/flickr/eyes_yes/', required=False)
 parser.add_argument('--layer', default='conv4_1', required=False)
-parser.add_argument('--sample_fraction', default=0.3, required=False)
-parser.add_argument('--n_clusters', default=32, required=False)
+parser.add_argument('--sample-fraction', dest='sample_fraction', default=0.3, required=False,
+                    help='Fraction of hypercolumns to sample from layer response')
+parser.add_argument('--n-clusters', dest='n_clusters', default=32, required=False)
 
-parser.add_argument('--center_only_path', default=None, required=False)
-parser.add_argument('--center_only_neuron_x', default=None, required=False)
+parser.add_argument('--center-only-path', dest='center_only_path', default=None, required=False,
+                    help='Path to images in which only the center part has image, e.g. images with an eye in the center')
+parser.add_argument('--center-only-neuron-x', dest='center_only_neuron_x', default=None, required=False,
+                    help='Location of the neuron whose receptive field covers the center part of the image')
 
-parser.add_argument('--load_layer_dump_from', default=None, required=False)
-parser.add_argument('--load_classification_dump_from', default=None, required=False)
+parser.add_argument('--load-layer-dump-from', dest='load_layer_dump_from', default=None, required=False,
+                    help=('Layer dump includes hypercolumn sampling mask, vectors list, origin file for each vector,'
+                          'and position of vector'))
+parser.add_argument('--load-classification-dump-from', dest='load_classification_dump_from', default=None, required=False,
+                    help='Classification dump includes kmeans object, kmeans score')
 
-parser.add_argument('--save_layer_dump_to', default=None, required=False)
-parser.add_argument('--save_classification_dump_to', default=None, required=False)
+parser.add_argument('--save-layer-dump-to', dest='save_layer_dump_to', default=None, required=False)
+parser.add_argument('--save-classification-dump-to', dest='save_classification_dump_to', default=None, required=False)
 
-parser.add_argument('--save_plots_to', default=None, required=False)
+parser.add_argument('--save-plots-to', dest='save_plots_to', default=None, required=False)
 
-parser.add_argument('--append_kmeans_scores', action='store_true')
+parser.add_argument('--append-kmeans-scores', dest='append_kmeans_scores', action='store_true')
 
 args = parser.parse_args()
 
@@ -54,6 +60,10 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
 # Find better way to write it to distribute more evenly
 def sample(width, height, number):
+    """
+    Select cells to sample from a 2d list.
+    If a cell in returned 2d list is true, then it's selected; otherwise, it's not.
+    """
     prob_true = number * 1.0 / width / height
     return np.random.rand(height, width) < prob_true
 
@@ -144,6 +154,7 @@ else:
                                      float(args.sample_fraction) * width_response * height_response)
 
             # TODO: this could be parallelized by multiplication -- then filtering out 0 columns
+            # Take hypercolumns out and put them in vectors
             for y in range(height_response):
                 for x in range(width_response):
                     if sample_mask[y][x]:
@@ -239,19 +250,28 @@ pca = PCA(n_components=80)
 #########
 
 
-# Given an id, return the patch in the input image that generated vectors[vec_id]
 def get_original_patch_of_vec(vec_id):
+    """
+    Given an id, return the patch in the input image that generated vectors[vec_id]
+    """
     this_vec_location = vec_location[vec_id]
     rec_field = rf.get_receptive_field(args.layer, this_vec_location[0], this_vec_location[1])
     load_image(vec_origin_file[vec_id], False)
+    top = rec_field[1]
+    bottom = rec_field[3] + 1
+    left = rec_field[0]
+    right = rec_field[2] + 1
     im = net.transformer.deprocess('data',
-        net.blobs['data'].data[0][:,rec_field[1]:(rec_field[3]+1),rec_field[0]:(rec_field[2]+1)])
+        net.blobs['data'].data[0][:, top:bottom, left:right])
     return im
 
 
 def get_sparsity(data):
-    # From http://www.cnbc.cmu.edu/~samondjm/papers/VinjeandGallant2000.pdf
-    # ??? BUT THIS ONLY MEASURES NEURON ON STIMULI? NOT REVERSE?
+    """
+    Calculate sparsity of data
+    From http://www.cnbc.cmu.edu/~samondjm/papers/VinjeandGallant2000.pdf
+    ??? BUT THIS ONLY MEASURES NEURON ON STIMULI? NOT REVERSE?
+    """
     numer = 0
     denom = 0
     n = len(data) * 1.0
