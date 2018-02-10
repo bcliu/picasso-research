@@ -3,6 +3,9 @@ Support vector machine code to classify responses of AlexNet.
     - type1 argument: path to directory containing images of type 1
     - type2 argument: path to directory containing images of type 2
     - others argument: path to directory containing images of all other types
+
+Loads fc6 layer response of each image into a list, then use SVM to learn a classifier that
+distinguishes these three types of images.
 """
 import argparse
 import pickle

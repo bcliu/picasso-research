@@ -7,10 +7,14 @@ constants.py contains root of Caffe and images and source code of the project. C
 alexnet_feature_extract.ipynb: Python code for visualizing responses and weights
 
 shrink-images.py: Shrink all images in a directory to smaller images with white padding
-	- First argument: path to directory
-	- fraction argument: how many times smaller the new image should be
+        - First argument: path to directory
+        - fraction argument: how many times smaller the new image should be
 
 svm.py: Support vector machine code to classify responses of AlexNet.
-	- type1 argument: path to directory containing images of type 1
-	- type2 argument: path to directory containing images of type 2
-	- others argument: path to directory containing images of all other types
+        Uses fc6 layer response of all images to learn a classifier that distinguishes the three types of images:
+        - type1 argument: path to directory containing images of type 1
+        - type2 argument: path to directory containing images of type 2
+        - others argument: path to directory containing images of all other types
+
+svm-2-classes.py: Train an SVM classifier with two classes (e.g. eye images, and other images that are not eyes),
+                  by taking a specified layer from AlexNet response.
