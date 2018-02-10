@@ -213,6 +213,7 @@ else:
     n_clusters = int(args.n_clusters)
     n_restarts = 10
     kmeans_obj = KMeans(init='k-means++', n_clusters=n_clusters, n_init=n_restarts)
+    # Predicted clusters of each vector
     predicted = kmeans_obj.fit_predict(vectors)
 
     # Precompute distances of every vector to its cluster center
@@ -284,30 +285,38 @@ def get_sparsity(data):
     return A, S
 
 
-def get_activations_of_cluster(cluster_i):
+def get_sum_vectors_in_cluster(cluster_i):
+    """
+    Returns sum of all vectors that are clustered into cluster_i,
+    and the number of vectors in that cluster
+    This is the total activation of that neuron.
+    """
     count = 0
-    bigsum = None
+    vectors_sum = None
     for idx in range(len(predicted)):
         if predicted[idx] == cluster_i:
-            if bigsum is None:
-                bigsum = vectors[idx]
+            if vectors_sum is None:
+                vectors_sum = vectors[idx]
             else:
-                bigsum = bigsum + vectors[idx]
+                vectors_sum = vectors_sum + vectors[idx]
             count = count + 1.0
 
-    return bigsum, count
+    return vectors_sum, count
 
 
 def plot_raw_activation(cluster_i):
-    totalsum, count = get_activations_of_cluster(cluster_i)
-    totalsum = totalsum / count
+    """
+    Plot average activation of a neuron
+    """
+    vectors_sum, count = get_sum_vectors_in_cluster(cluster_i)
+    average_activation = vectors_sum / count
 
-    plt.plot(range(0, len(totalsum)), totalsum, 'b-')
+    plt.plot(range(0, len(average_activation)), average_activation, 'b-')
     plt.title(args.layer + ' Cluster #' + str(cluster_i) + ' (' + str(args.n_clusters) + ' total)')
     plt.xlabel('Neuron #')
     plt.ylabel('Average activation')
 
-    A, S = get_sparsity(totalsum)
+    A, S = get_sparsity(average_activation)
     plt.annotate(
         'Sparsity: S=' + str(S),
         xy=(0.9, 0.9), xytext=(0.9, 0.9),
@@ -316,12 +325,29 @@ def plot_raw_activation(cluster_i):
     plt.show()
 
 
+def get_kmeans_score_func():
+    """
+    Returns a function that takes a vector_id and returns kmeans score of that vector.
+    If kmeans_scores is not empty, use the precomputed scores; otherwise, compute on-demand
+    """
+    if len(kmeans_scores) == 0:
+        print 'Precomputed kmeans scores do not exist'
+        return lambda vector_id: kmeans_obj.score(vectors[vec_i].reshape(1, -1))
+    else:
+        return lambda vector_id: kmeans_scores[vec_i]
+
 def get_top_n_in_cluster(cluster_i, n):
+    """
+    Get a list of (vector id, kmeans score) tuples in the cluster_i, ranked by their closeness to the
+    center of the cluster (by kmeans score)
+    """
+    # List of (vector id, kmeans score) tuples
     scores = []
 
+    kmeans_score_func = get_kmeans_score_func()
     for vec_id in range(len(vectors)):
         if predicted[vec_id] == cluster_i:
-            scores.append((vec_id, kmeans_obj.score(vectors[vec_id].reshape(1, -1))))
+            scores.append((vec_id, kmeans_score_func(vec_id)))
 
     scores.sort(key=lambda tup: -tup[1])
     if n == -1:
@@ -335,15 +361,10 @@ def get_top_in_clusters(clusters_i):
     for i in clusters_i:
         scores[i] = []
 
-    if len(kmeans_scores) == 0:
-        print 'Precomputed kmeans scores do not exist'
-        for vec_i in range(len(vectors)):
-            if predicted[vec_i] in clusters_i:
-                scores[predicted[vec_i]].append((vec_i, kmeans_obj.score(vectors[vec_i].reshape(1, -1))))
-    else:
-        for vec_i in range(len(vectors)):
-            if predicted[vec_i] in clusters_i:
-                scores[predicted[vec_i]].append((vec_i, kmeans_scores[vec_i]))
+    kmeans_score_func = get_kmeans_score_func()
+    for vec_i in range(len(vectors)):
+        if predicted[vec_i] in clusters_i:
+            scores[predicted[vec_i]].append((vec_i, kmeans_score_func(vec_i)))
 
     out = []
     for i in clusters_i:
@@ -376,7 +397,7 @@ def plot_activation(cluster_i, top_n=4):
     grid_dims = (8, 9)
     ax = plt.subplot2grid(grid_dims, (0, 0), colspan=7, rowspan=8)
 
-    bigsum, count = get_activations_of_cluster(cluster_i)
+    bigsum, count = get_sum_vectors_in_cluster(cluster_i)
     bigsum /= count
 
     # Get sorted indexes
